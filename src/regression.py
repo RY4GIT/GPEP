@@ -596,6 +596,7 @@ def flatten_list(lst):
 # machine learning regression
 
 def train_and_return_test(Xtrain, ytrain, Xtest, method, probflag, settings = {}, weight=[]):
+    """Unit train and return for ML method (currently only Random Forest)"""
     indexvalid = ~np.isnan( np.sum(Xtrain, axis=1) + ytrain)
 
     if Xtest.ndim == 1:
@@ -1002,6 +1003,8 @@ def loop_regression_2Dor3D_multiprocessing(stn_data, stn_predictor, tar_nearInde
 ########################################################################################################################
 
 def main_regression(config, target):
+    """Main function for regression"""
+    
     # target: loo (leave one out station) or grid
     t1 = time.time()
 
