@@ -3,16 +3,6 @@ import xarray as xr
 import numpy as np
 import multiprocessing
 
-# def distance(lat1, lon1, lat2, lon2):
-#     # distance from lat/lon to km
-#     radius = 6371  # km
-#     dlat = np.radians(lat2 - lat1)
-#     dlon = np.radians(lon2 - lon1)
-#     a = np.sin(dlat / 2) * np.sin(dlat / 2) + np.cos(np.radians(lat1)) \
-#         * np.cos(np.radians(lat2)) * np.sin(dlon / 2) * np.sin(dlon / 2)
-#     c = 2 * np.arctan2(np.sqrt(a), np.sqrt(1 - a))
-#     d = radius * c
-#     return d
 
 def distance(lat1, lon1, lat2, lon2):
     # distance from lat/lon to km

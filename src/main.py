@@ -15,7 +15,7 @@ if __name__ == '__main__':
     t1 = time.time()
 
     # config_file = sys.argv[1]
-    config_file = r'C:\Users\flipl\dev\GPEP\config_templates\testcase.config.RF.toml'
+    config_file = r'C:\Users\flipl\dev\GPEP\config_templates\testcase.AZWG.config.static.toml'
 
     ########################################################################################################################
     # load configuration file

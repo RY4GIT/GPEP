@@ -330,53 +330,25 @@ def merge_stndata_into_single_file(config):
         print('A merged station data file does not exist: reading station information from individual files')
 
         df_stn = pd.read_csv(input_stn_list)
-        nstn   = len(df_stn)
+        df_stn["mask"] = 1.0
 
-        infile0 = f'{input_stn_path}/{df_stn.stnid.values[0]}.nc'
-        with xr.open_dataset(infile0) as ds:
-            time_coord = ds.time
-            ntime = len(ds.time)
+        # Read all station data files into a list of dataframes
+        all_dfs = []
+        for i, stnid in enumerate(df_stn.stnid):
+            infilei = f'{input_stn_path}/sm_{stnid}_depth05cm.csv' #TODO: make the depth values be flexible
+            if not os.path.isfile(infilei):
+                print(f'{infilei} does not exist. Skip {stnid}.')
+                continue
+            df_datai = pd.read_csv(infilei, index_col='time', parse_dates=True)
+            # drop if there is duplicate time (time is now the index, not a column)
+            df_datai = df_datai[~df_datai.index.duplicated(keep='first')]
+            all_dfs.append(df_datai[input_vars]) # TODO: this only works for 1 variables
 
-        var_values = np.nan * np.zeros([nstn, ntime, len(input_vars)], dtype=np.float32)
-        print(f'Number of input station: {nstn}')
-        print(f'Time steps:              {ntime}')
-        print('Start merging station data ... ')
-
-        for i in range(nstn):
-            infilei = f'{input_stn_path}/{df_stn.stnid.values[i]}.nc'
-            dsi = xr.load_dataset(infilei)
-            for j in range(len(input_vars)):
-                if input_vars[j] in dsi.data_vars:
-                    var_values[i, :, j] = np.squeeze(dsi[input_vars[j]].values)
-
-        ds_stn                = xr.Dataset()
-        ds_stn.coords['time'] = time_coord
-        ds_stn.coords['stn']  = np.arange(nstn)
-
-        for col in df_stn.columns:
-            ds_stn[col] = xr.DataArray(df_stn[col].values, dims=('stn'))
-
-        for i in range(len(input_vars)):
-            ds_stn[input_vars[i]] = xr.DataArray(var_values[:, :, i], dims=('stn', 'time'))
-
-        del var_values
-
-    # convert input vars to target vars
-    for mapping in mapping_InOut_var:
-        mapping = mapping.replace(' ', '')
-        tarvar  = mapping.split('=')[0]
-
-        if tarvar in target_vars:
-
-            if tarvar in ds_stn:
-                print(f'{tarvar} is already in ds_stn. no need to perform {mapping}')
-            else:
-                invars = [v for v in input_vars if v in mapping]
-                for v in invars:
-                    exec(f"{v}=ds_stn.{v}")
-
-                operation      = mapping.split('=')[1]
-                ds_stn[tarvar] = eval(operation)
+        all_dfs_concat = pd.concat(all_dfs, axis=1)
+        
+        ds_stn = xr.Dataset(coords={'stn': df_stn.stnid, 'lat': df_stn.lat.values, 'lon': df_stn.lon.values, 'mask': df_stn["mask"].values.astype(int), 'time': all_dfs_concat.index})
+        for var in input_vars:
+            ds_stn[var] = xr.DataArray(all_dfs_concat.values, dims=('time', 'stn'))
 
     # constrain variables
     for i in range(len(target_vars)):
@@ -417,13 +389,7 @@ def merge_stndata_into_single_file(config):
     for var in ds_stn.data_vars:
         encoding[var] = {'zlib': True, 'complevel': 4}
 
-    if 'stnid' in ds_stn:
-        try:
-            ds_stn['stnid'] = ds_stn['stnid'].astype('|S')
-        except:
-            print('Failed to process station ID information.')
-
-    ds_stn.to_netcdf(file_allstn, encoding=encoding)
+    ds_stn.to_netcdf(file_allstn)
 
     t2 = time.time()
     print('Time cost (s) for merging station data file:', t2-t1, '\n')
