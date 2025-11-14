@@ -938,17 +938,6 @@ def regression_for_blocks(r1, r2, c1, c2):
                                     xdata_near = xdata_near_try
                                     xdata_g = xdata_g_try
 
-                                    # # check if dynamic predictors are good for regression. not necessary after unique value check
-                                    # if check_predictor_matrix_behavior(xdata_near_try, sample_weight) == True:
-                                    #     xdata_near = xdata_near_try
-                                    #     xdata_g = xdata_g_try
-                                    # else:
-                                    #     xdata_near_try = np.hstack((xdata_near, xdata_near_add[:, ~dynamic_predictors['predictor_checkflag']]))
-                                    #     xdata_g_try = np.hstack((xdata_g, xdata_g_add[~dynamic_predictors['predictor_checkflag']]))
-                                    #     if check_predictor_matrix_behavior(xdata_near_try, sample_weight) == True:
-                                    #         xdata_near = xdata_near_try
-                                    #         xdata_g = xdata_g_try
-
                         # regression
                         if method == 'Linear':
                             ydata_tar[r-r1, c-c1, d] = weight_linear_regression(xdata_near, sample_weight, ydata_near, xdata_g)

@@ -58,8 +58,7 @@ def find_nearstn_for_one_target(lat_tar, lon_tar, lat_stn, lon_stn, try_radius, 
     return near_index, near_dist
 
 # parallel version
-def find_nearstn_for_Grids(lat_stn, lon_stn, lat_grid, lon_grid, mask_grid, try_radius, nearstn_min, nearstn_max, initial_distance,
-                           num_processes=4):
+def find_nearstn_for_Grids(lat_stn, lon_stn, lat_grid, lon_grid, mask_grid, try_radius, nearstn_min, nearstn_max, initial_distance, num_processes=4):
     if lat_grid.ndim != 2:
         sys.exit('Error! Wrong dim of lat_grid!')
 
@@ -83,13 +82,38 @@ def find_nearstn_for_Grids(lat_stn, lon_stn, lat_grid, lon_grid, mask_grid, try_
         results = []
         for chunk in chunks:
             result = pool.apply_async(process_chunk, (chunk, lat_stn, lon_stn, lat_grid, lon_grid, mask_grid, try_radius, 
-                                                      nearstn_min, nearstn_max, initial_distance))
+                                                    nearstn_min, nearstn_max, initial_distance))
             results.append(result)
 
         for result, chunk in zip(results, chunks):
             chunk_ni, chunk_nd = result.get()
             nearIndex[chunk[0]:chunk[1], :, :] = chunk_ni
             nearDistance[chunk[0]:chunk[1], :, :] = chunk_nd
+
+    return nearIndex, nearDistance
+
+# serial version
+def find_nearstn_for_Grids_serial(lat_stn, lon_stn, lat_grid, lon_grid, mask_grid, try_radius, nearstn_min, nearstn_max, initial_distance):
+    if lat_grid.ndim != 2:
+        sys.exit('Error! Wrong dim of lat_grid!')
+
+    # lon_stn/lat_stn can contain nan
+
+    # simple distance threshold
+    try_radius = try_radius / 100  # try within this degree (assume 1 degree ~= 100 km). if failed, expanding to all stations.
+
+    # initialization
+    nrows, ncols = np.shape(lat_grid)
+    nearIndex    = -99999 * np.ones([nrows, ncols, nearstn_max], dtype=int)
+    nearDistance = np.nan * np.ones([nrows, ncols, nearstn_max], dtype=np.float32)
+
+    # process sequentially without multiprocessing
+    for rr in range(nrows):
+        for cc in range(ncols):
+            if mask_grid[rr, cc] == 1:
+                ni, nd = find_nearstn_for_one_target(lat_grid[rr, cc], lon_grid[rr, cc], lat_stn, lon_stn, try_radius, initial_distance,
+                                                    nearstn_min, nearstn_max)
+                nearIndex[rr, cc, :], nearDistance[rr, cc, :] = ni, nd
 
     return nearIndex, nearDistance
 
@@ -100,8 +124,7 @@ def process_chunk(chunk, lat_stn, lon_stn, lat_grid, lon_grid, mask_grid, try_ra
     for rr in range(chunk[0], chunk[1]):
         for cc in range(lat_grid.shape[1]):
             if mask_grid[rr, cc] == 1:
-                ni, nd = find_nearstn_for_one_target(lat_grid[rr, cc], lon_grid[rr, cc], lat_stn, lon_stn, try_radius, initial_distance,
-                                                     nearstn_min, nearstn_max)
+                ni, nd = find_nearstn_for_one_target(lat_grid[rr, cc], lon_grid[rr, cc], lat_stn, lon_stn, try_radius, initial_distance, nearstn_min, nearstn_max)
                 nearIndex[rr - chunk[0], cc, :], nearDistance[rr - chunk[0], cc, :] = ni, nd
 
     return nearIndex, nearDistance
@@ -126,8 +149,7 @@ def find_nearstn_for_InStn(lat_stn, lon_stn, try_radius, nearstn_min, nearstn_ma
         lat_stni[i] = np.nan
         lon_stni[i] = np.nan
         if ~np.isnan(lat_stn[i]):
-                nearIndex[i, :], nearDistance[i, :] = find_nearstn_for_one_target(lat_stn[i], lon_stn[i], lat_stni, lon_stni, try_radius, 
-                                                                                  initial_distance, nearstn_min, nearstn_max)
+                nearIndex[i, :], nearDistance[i, :] = find_nearstn_for_one_target(lat_stn[i], lon_stn[i], lat_stni, lon_stni, try_radius, initial_distance, nearstn_min, nearstn_max)
     # t2 = time.time()
     # print('Time cost (seconds):', t2 - t1)
 
@@ -236,8 +258,9 @@ def get_near_station_info(config):
         ########################################################################################################################
         # find nearby stations for stations/grids
         t11=time.time()
-        nearIndex_Grid, nearDistance_Grid   = find_nearstn_for_Grids(lat_stn, lon_stn, lat_grid, lon_grid, mask_grid, try_radius, nearstn_min,
-                                                                   nearstn_max, initial_distance, num_processes)
+        nearIndex_Grid, nearDistance_Grid   = find_nearstn_for_Grids_serial(lat_stn, lon_stn, lat_grid, lon_grid, mask_grid, try_radius, nearstn_min, nearstn_max, initial_distance)
+        # nearIndex_Grid, nearDistance_Grid   = find_nearstn_for_Grids(lat_stn, lon_stn, lat_grid, lon_grid, mask_grid, try_radius, nearstn_min,
+        #                                                            nearstn_max, initial_distance, num_processes)
         nearIndex_InStn, nearDistance_InStn = find_nearstn_for_InStn(lat_stn, lon_stn, try_radius, nearstn_min, nearstn_max, initial_distance)
         t22 = time.time()
         print('Time cost (s) of getting near station index and distance:', t22-t11)
