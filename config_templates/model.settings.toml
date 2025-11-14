@@ -76,7 +76,12 @@ append_date_to_output_filename = true
 print_config = false
 
 # overwrite existing files
+
+# When you change the input data / add variables
+overwrite_stninfo = false 
 overwrite_merged_stnfile = false
+
+# When you run a new model
 overwrite_station_cc = false
 overwrite_weight = false
 overwrite_cv_reg = false

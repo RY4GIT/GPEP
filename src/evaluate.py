@@ -2,6 +2,7 @@
 
 import numpy as np
 
+
 def evaluate_allpoint(obs, est, threshold=0.1):
     # obs/est: [number of points, sample]
     nstn = obs.shape[0]
@@ -16,7 +17,24 @@ def evaluate(obs, est, threshold=0.1):
 
     obs, est = data_preprocess(obs, est)
 
-    metric_names = ['CC', 'ME', 'RB', 'MAE', 'ARB', 'RMSE', 'NSE', 'KGE_G2009', 'KGE_K2012', 'KGE_P2018', 'KGE_T2021', 'POD', 'FOH', 'FAR', 'CSI', 'HSS']
+    metric_names = [
+        "CC",
+        "ME",
+        "RB",
+        "MAE",
+        "ARB",
+        "RMSE",
+        "NSE",
+        "KGE_G2009",
+        "KGE_K2012",
+        "KGE_P2018",
+        "KGE_T2021",
+        "POD",
+        "FOH",
+        "FAR",
+        "CSI",
+        "HSS",
+    ]
     metric_values = np.nan * np.zeros(16)
     if len(obs) > 1:
         metric_values[0] = cal_CC(obs, est, preprocess=False)
@@ -26,24 +44,24 @@ def evaluate(obs, est, threshold=0.1):
         metric_values[4] = cal_ARB(obs, est, preprocess=False)
         metric_values[5] = cal_RMSE(obs, est, preprocess=False)
         metric_values[6] = cal_NSE(obs, est, preprocess=False)
-        metric_values[7] = cal_KGE_G2009(obs, est, preprocess=False)['KGE']
-        metric_values[8] = cal_KGE_K2012(obs, est, preprocess=False)['KGE']
-        metric_values[9] = cal_KGE_P2018(obs, est, preprocess=False)['KGE']
-        metric_values[10] = cal_KGE_T2021(obs, est, preprocess=False)['KGE']
+        metric_values[7] = cal_KGE_G2009(obs, est, preprocess=False)["KGE"]
+        metric_values[8] = cal_KGE_K2012(obs, est, preprocess=False)["KGE"]
+        metric_values[9] = cal_KGE_P2018(obs, est, preprocess=False)["KGE"]
+        metric_values[10] = cal_KGE_T2021(obs, est, preprocess=False)["KGE"]
 
         if ~np.isnan(threshold):
             icont = cal_contingency(obs, est, threshold)
-            metric_values[11] = icont['POD']
-            metric_values[12] = icont['FOH']
-            metric_values[13] = icont['FAR']
-            metric_values[14] = icont['CSI']
-            metric_values[15] = icont['HSS']
+            metric_values[11] = icont["POD"]
+            metric_values[12] = icont["FOH"]
+            metric_values[13] = icont["FAR"]
+            metric_values[14] = icont["CSI"]
+            metric_values[15] = icont["HSS"]
 
     return metric_values, metric_names
 
 
 def data_preprocess(obs, est):
-    ind_invalid = np.isnan(obs+est) | np.isinf(obs+est)
+    ind_invalid = np.isnan(obs + est) | np.isinf(obs + est)
     obs = obs[~ind_invalid]
     est = est[~ind_invalid]
     return obs, est
@@ -126,8 +144,10 @@ def cal_NSE(obs, est, preprocess=True):
     if preprocess:
         obs, est = data_preprocess(obs, est)
     if len(obs) > 1:
-        NSE = 1 - (np.sum((obs - est) ** 2, axis=0, dtype=np.float64) /
-                   np.sum((obs - np.mean(obs)) ** 2, dtype=np.float64))
+        NSE = 1 - (
+            np.sum((obs - est) ** 2, axis=0, dtype=np.float64)
+            / np.sum((obs - np.mean(obs)) ** 2, dtype=np.float64)
+        )
     else:
         NSE = np.nan
     return NSE
@@ -143,20 +163,21 @@ def cal_KGE_G2009(obs, est, preprocess=True):
     if len(obs):
         est_mean = np.mean(est, axis=0, dtype=np.float64)
         obs_mean = np.mean(obs, dtype=np.float64)
-        r = np.sum((est - est_mean) * (obs - obs_mean), axis=0, dtype=np.float64) / \
-            np.sqrt(np.sum((est - est_mean) ** 2, axis=0, dtype=np.float64) *
-                    np.sum((obs - obs_mean) ** 2, dtype=np.float64))
+        r = np.sum(
+            (est - est_mean) * (obs - obs_mean), axis=0, dtype=np.float64
+        ) / np.sqrt(
+            np.sum((est - est_mean) ** 2, axis=0, dtype=np.float64)
+            * np.sum((obs - obs_mean) ** 2, dtype=np.float64)
+        )
         # calculate error in sestad of flow alpha
         alpha = np.std(est, axis=0) / np.std(obs, dtype=np.float64)
         # calculate error in volume beta (bias of mean discharge)
-        beta = np.sum(est, axis=0, dtype=np.float64) / \
-            np.sum(obs, dtype=np.float64)
+        beta = np.sum(est, axis=0, dtype=np.float64) / np.sum(obs, dtype=np.float64)
         # calculate the Kling-Gupta Efficiency KGE
         KGE = 1 - np.sqrt((r - 1) ** 2 + (alpha - 1) ** 2 + (beta - 1) ** 2)
-        KGEgroup = {'KGE': KGE, 'r': r, 'alpha': alpha, 'beta': beta}
+        KGEgroup = {"KGE": KGE, "r": r, "alpha": alpha, "beta": beta}
     else:
-        KGEgroup = {'KGE': np.nan, 'r': np.nan,
-                    'alpha': np.nan, 'beta': np.nan}
+        KGEgroup = {"KGE": np.nan, "r": np.nan, "alpha": np.nan, "beta": np.nan}
     return KGEgroup  # or output np.vstack((KGE, r, alpha, beta))
 
 
@@ -170,22 +191,26 @@ def cal_KGE_K2012(obs, est, preprocess=True):
     if len(obs) > 1:
         est_mean = np.mean(est, axis=0, dtype=np.float64)
         obs_mean = np.mean(obs, dtype=np.float64)
-        r = np.sum((est - est_mean) * (obs - obs_mean), axis=0, dtype=np.float64) / \
-            np.sqrt(np.sum((est - est_mean) ** 2, axis=0, dtype=np.float64) *
-                    np.sum((obs - obs_mean) ** 2, dtype=np.float64))
+        r = np.sum(
+            (est - est_mean) * (obs - obs_mean), axis=0, dtype=np.float64
+        ) / np.sqrt(
+            np.sum((est - est_mean) ** 2, axis=0, dtype=np.float64)
+            * np.sum((obs - obs_mean) ** 2, dtype=np.float64)
+        )
         # calculate error in sestad of flow gamma (avoiding cross correlation with
         # bias by dividing by the mean)
-        gamma = (np.std(est, axis=0, dtype=np.float64) / est_mean) / \
-            (np.std(obs, dtype=np.float64) / obs_mean)
+        gamma = (np.std(est, axis=0, dtype=np.float64) / est_mean) / (
+            np.std(obs, dtype=np.float64) / obs_mean
+        )
         # calculate error in volume beta (bias of mean discharge)
-        beta = np.mean(est, axis=0, dtype=np.float64) / \
-            np.mean(obs, axis=0, dtype=np.float64)
+        beta = np.mean(est, axis=0, dtype=np.float64) / np.mean(
+            obs, axis=0, dtype=np.float64
+        )
         # calculate the modified Kling-Gupta Efficiency KGE'
         KGE = 1 - np.sqrt((r - 1) ** 2 + (gamma - 1) ** 2 + (beta - 1) ** 2)
-        KGEgroup = {'KGE': KGE, 'r': r, 'gamma': gamma, 'beta': beta}
+        KGEgroup = {"KGE": KGE, "r": r, "gamma": gamma, "beta": beta}
     else:
-        KGEgroup = {'KGE': np.nan, 'r': np.nan,
-                    'gamma': np.nan, 'beta': np.nan}
+        KGEgroup = {"KGE": np.nan, "r": np.nan, "gamma": np.nan, "beta": np.nan}
     return KGEgroup  # or output np.vstack((KGE, r, gamma, beta))
 
 
@@ -199,25 +224,36 @@ def cal_KGE_P2018(obs, est, preprocess=True):
     if len(obs) > 1:
         sim_rank = np.argsort(np.argsort(est, axis=0), axis=0)
         obs_rank = np.argsort(np.argsort(obs, axis=0), axis=0)
-        r = np.sum((obs_rank - np.mean(obs_rank, axis=0, dtype=np.float64)) *
-                   (sim_rank - np.mean(sim_rank, axis=0, dtype=np.float64)), axis=0) / \
-            np.sqrt(np.sum((obs_rank - np.mean(obs_rank, axis=0, dtype=np.float64)) ** 2, axis=0) *
-                    (np.sum((sim_rank - np.mean(sim_rank, axis=0, dtype=np.float64)) ** 2, axis=0)))
+        r = np.sum(
+            (obs_rank - np.mean(obs_rank, axis=0, dtype=np.float64))
+            * (sim_rank - np.mean(sim_rank, axis=0, dtype=np.float64)),
+            axis=0,
+        ) / np.sqrt(
+            np.sum(
+                (obs_rank - np.mean(obs_rank, axis=0, dtype=np.float64)) ** 2, axis=0
+            )
+            * (
+                np.sum(
+                    (sim_rank - np.mean(sim_rank, axis=0, dtype=np.float64)) ** 2,
+                    axis=0,
+                )
+            )
+        )
         # calculate error in timing and dynamics alpha (flow duration curve)
-        sim_fdc = np.sort(est / (est.shape[0] * np.mean(
-            est, axis=0, dtype=np.float64)), axis=0)
+        sim_fdc = np.sort(
+            est / (est.shape[0] * np.mean(est, axis=0, dtype=np.float64)), axis=0
+        )
         obs_fdc = np.sort(
-            obs / (obs.shape[0] * np.mean(obs, axis=0, dtype=np.float64)), axis=0)
+            obs / (obs.shape[0] * np.mean(obs, axis=0, dtype=np.float64)), axis=0
+        )
         alpha = 1 - 0.5 * np.sum(np.abs(sim_fdc - obs_fdc), axis=0)
         # calculate error in volume beta (bias of mean discharge)
-        beta = np.mean(est, axis=0) / \
-            np.mean(obs, axis=0, dtype=np.float64)
+        beta = np.mean(est, axis=0) / np.mean(obs, axis=0, dtype=np.float64)
         # calculate the non-parametric Kling-Gupta Efficiency KGEnp
         KGE = 1 - np.sqrt((r - 1) ** 2 + (alpha - 1) ** 2 + (beta - 1) ** 2)
-        KGEgroup = {'KGE': KGE, 'r': r, 'alpha': alpha, 'beta': beta}
+        KGEgroup = {"KGE": KGE, "r": r, "alpha": alpha, "beta": beta}
     else:
-        KGEgroup = {'KGE': np.nan, 'r': np.nan,
-                    'alpha': np.nan, 'beta': np.nan}
+        KGEgroup = {"KGE": np.nan, "r": np.nan, "alpha": np.nan, "beta": np.nan}
     return KGEgroup  # or output np.vstack((KGE, r, alpha, beta))
 
 
@@ -229,22 +265,24 @@ def cal_KGE_T2021(obs, est, preprocess=True):
     ind_nan = np.isnan(obs) | np.isnan(est)
     obs = obs[~ind_nan]
     est = est[~ind_nan]
-    if len(obs)>2:
+    if len(obs) > 2:
         est_mean = np.mean(est, axis=0, dtype=np.float64)
         obs_mean = np.mean(obs, axis=0, dtype=np.float64)
-        r = np.sum((est - est_mean) * (obs - obs_mean), axis=0, dtype=np.float64) / \
-            np.sqrt(np.sum((est - est_mean) ** 2, axis=0, dtype=np.float64) *
-                    np.sum((obs - obs_mean) ** 2, dtype=np.float64))
+        r = np.sum(
+            (est - est_mean) * (obs - obs_mean), axis=0, dtype=np.float64
+        ) / np.sqrt(
+            np.sum((est - est_mean) ** 2, axis=0, dtype=np.float64)
+            * np.sum((obs - obs_mean) ** 2, dtype=np.float64)
+        )
         # calculate error in sestad of flow alpha
         alpha = np.std(est, axis=0) / np.std(obs, dtype=np.float64)
         # calculate error in volume beta (bias of mean discharge)
         beta = (np.mean(est) - np.mean(obs)) / np.std(obs)
         # calculate the Kling-Gupta Efficiency KGE
         KGE = 1 - np.sqrt((r - 1) ** 2 + (alpha - 1) ** 2 + (beta) ** 2)
-        KGEgroup = {'KGE': KGE, 'r': r, 'alpha': alpha, 'beta': beta}
+        KGEgroup = {"KGE": KGE, "r": r, "alpha": alpha, "beta": beta}
     else:
-        KGEgroup = {'KGE': np.nan, 'r': np.nan,
-                    'alpha': np.nan, 'beta': np.nan}
+        KGEgroup = {"KGE": np.nan, "r": np.nan, "alpha": np.nan, "beta": np.nan}
     return KGEgroup  # or output np.vstack((KGE, r, alpha, beta))
 
 
@@ -280,17 +318,19 @@ def cal_contingency(obs, est, Tre=0.1):
         except:
             CSI = np.nan
         try:
-            HSS = 2 * (n11 * n00 - n10 * n01) / ((n11 + n01) *
-                                                 (n01 + n00) + (n11 + n10) * (n10 + n00))
+            HSS = (
+                2
+                * (n11 * n00 - n10 * n01)
+                / ((n11 + n01) * (n01 + n00) + (n11 + n10) * (n10 + n00))
+            )
         except:
             HSS = np.nan
-    contingency_group = {'POD': POD, 'FOH': FOH, 'FAR': FAR,
-                         'CSI': CSI, 'HSS': HSS}
+    contingency_group = {"POD": POD, "FOH": FOH, "FAR": FAR, "CSI": CSI, "HSS": HSS}
     return contingency_group
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     a = np.random.rand(100)
     b = np.random.rand(100)
     metric_values, metric_names = evaluate(a, b, 0.1)
-    print(metric_names, '\n', metric_values)
+    print(metric_names, "\n", metric_values)

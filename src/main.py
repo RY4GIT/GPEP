@@ -9,13 +9,16 @@ import probabilistic_estimation
 
 import sys, time
 import warnings
-warnings.filterwarnings('ignore')
 
-if __name__ == '__main__':
+warnings.filterwarnings("ignore")
+
+if __name__ == "__main__":
     t1 = time.time()
 
     # config_file = sys.argv[1]
-    config_file = r'C:\Users\flipl\dev\GPEP\config_templates\testcase.AZWG.config.static.toml'
+    config_file = (
+        r"C:\Users\flipl\dev\GPEP\config_templates\testcase.AZWG.config.static.toml"
+    )
 
     ########################################################################################################################
     # load configuration file
@@ -36,17 +39,19 @@ if __name__ == '__main__':
 
     ########################################################################################################################
     # perform regression
-    # (1) estimate predictive uncertainty using cross-validated (i.e., leave one out, LOO) regression at station points 
-    config = regression.main_regression(config, 'cval')
+    # (1) estimate predictive uncertainty using cross-validated (i.e., leave one out, LOO) regression at station points
+    config = regression.main_regression(config, "cval")
 
     # (2) estimate regression coefficients at all grid points
-    config = regression.main_regression(config, 'grid')
+    config = regression.main_regression(config, "grid")
 
     ########################################################################################################################
     # probabilistic / ensemble estimation
-    if config['ensemble_flag'] == False:
-        print('ensemble_flag is false in the configuration file -- ensemble generation will be skipped.')
-        
+    if config["ensemble_flag"] == False:
+        print(
+            "ensemble_flag is false in the configuration file -- ensemble generation will be skipped."
+        )
+
     else:
         ########################################################################################################################
         # estimate gridcell uncertainty based on interpolating estimation error from station locations (the LOO regression)
@@ -62,6 +67,5 @@ if __name__ == '__main__':
         config = probabilistic_estimation.generate_prob_estimates(config)
 
     t2 = time.time()
-    print('Total time cost (s):', t2-t1)
-    print('Successfully finished GPEP run!')
-
+    print("Total time cost (s):", t2 - t1)
+    print("Successfully finished GPEP run!")
