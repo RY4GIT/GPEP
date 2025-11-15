@@ -1619,7 +1619,7 @@ def main_regression(config, target):
                         "back_transform",
                     )
             else:
-                dtmp2 = estimates
+                dtmp2 = estimates.T
 
             metvalue, metname = evaluate_allpoint(dtmp1, dtmp2, np.nan)
             ds_out.coords["met"] = metname

@@ -20,7 +20,7 @@ def cal_cross_cc(d1, d2):
 
 def station_lag_correlation(data, lag):
     # data: [number of stations, number of time steps]
-    nstn, ntime = data.shape
+    (ntime, nstn) = data.shape
     cc = np.nan * np.zeros(nstn)
     for i in range(nstn):
         d1 = data[i, :-lag]

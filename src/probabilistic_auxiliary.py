@@ -5,7 +5,7 @@ import xarray as xr
 
 # from tqdm.contrib import itertools
 import sys, os, time
-
+from tqdm import tqdm
 from weight_calculation import distanceweight
 from data_processing import data_transformation
 
@@ -22,7 +22,7 @@ def nearby_station_statistics(stn_data, tar_nearIndex, method):
         # make it a 3D array to be consistent
         tar_nearIndex = tar_nearIndex[np.newaxis, :, :]
 
-    nstn, ntime = np.shape(stn_data)
+    (ntime, nstn) = np.shape(stn_data)
     nrow, ncol, nearmax = np.shape(tar_nearIndex)
     estimates = np.nan * np.zeros([nrow, ncol, ntime], dtype=np.float32)
 
@@ -33,9 +33,9 @@ def nearby_station_statistics(stn_data, tar_nearIndex, method):
             index_valid = sample_nearIndex >= 0
             if np.sum(index_valid) > 0:
                 sample_nearIndex = sample_nearIndex[index_valid]
-                ydata_near = stn_data[sample_nearIndex, :]
+                ydata_near = stn_data[:, sample_nearIndex]
                 if method == "max":
-                    estimates[r, c, :] = np.nanmax(ydata_near, axis=0)
+                    estimates[r, c, :] = np.nanmax(ydata_near, axis=1)
                 elif method == "min":
                     estimates[r, c, :] = np.nanmin(ydata_near, axis=0)
                 else:
@@ -64,8 +64,9 @@ def extrapolation(datain, nearstn_loc, nearstn_DistOrWeright, weighttype, excfla
     nrows, ncols, nearnum = np.shape(nearstn_loc)
     nstn, ntimes = np.shape(datain)
     dataout = np.nan * np.zeros([nrows, ncols, ntimes], dtype=np.float32)
-    for r in range(nrows):
-        for c in range(ncols):
+    for r in tqdm(range(nrows)):
+        for c in tqdm(range(ncols)):
+            # TODO: this is slow, need to optimize or use parallel processing
             if not nearstn_loc[r, c, 0] >= 0:
                 continue
             nearloci = nearstn_loc[r, c, :]
@@ -273,10 +274,10 @@ def extrapolate_auxiliary_info(config):
         # maxvalue = np.nanmax(stn_value, axis=1)[:, np.newaxis]
         # loo_value = np.clip(loo_value, minvalue, maxvalue)  # Apply min and max constraints to loo_value to each station
 
-        error = extrapolation(
-            (loo_value - stn_value) ** 2, nearIndex, nearWeight, "DirectWeight", 0
+        _error = extrapolation(
+            (loo_value - stn_value.T) ** 2, nearIndex, nearWeight, "DirectWeight", 0
         )
-        error = error**0.5
+        error = _error**0.5
 
         if len(var_name_trans) > 0:
             var_name_save = "uncert_" + var_name_trans

@@ -904,7 +904,7 @@ def generate_prob_estimates(config):
         print("Error: ensemble_start or ensemble_start is negative.")
         return
 
-    spcorr_structure(config)
+    spcorr_structure(config)  # This takes long time
 
     ensemble_number = ensemble_end - ensemble_start + 1
     items = [(config, [e, e + 1]) for e in range(ensemble_number)]

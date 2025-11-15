@@ -32,7 +32,7 @@ outpath_parent = "G:/Shared drives/Ryoko and Hilary/q-field/out/gpep/AZWG"
 ############################## target variables and periods
 # target period
 date_start = "2018-01-01"
-date_end = "2018-02-10"
+date_end = "2018-01-02"
 
 # input/output variables
 input_vars = ['sm'] # variables in the raw station files
@@ -84,9 +84,12 @@ ensemble_end = 5
 linkvar = []
 
 # variable correlations. They are all optional
-clen = [] # corresponding to target_vars
-lag1_auto_cc = [] # corresponding to target_vars
-cross_cc = [] # corresponding to linkvar
+clen = [150] 
+# corresponding to target_vars
+lag1_auto_cc = [-9999] 
+# corresponding to target_vars
+cross_cc = [] 
+# corresponding to linkvar
 
 # direct: using raw time series to calculate autocorrelation; anomaly: using the anomaly of time series to calculate autocorrelation
 auto_corr_method = ['direct'] # corresponding to target_vars

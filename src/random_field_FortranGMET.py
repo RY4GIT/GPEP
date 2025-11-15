@@ -50,7 +50,7 @@ def spcorr_grd(grid_lat, grid_lon, clen, outfile):
     # ----------------------------------------------------------------------------------------
     # (1) DEFINE HYPER-PARAMETERS
     # ----------------------------------------------------------------------------------------
-    nnst = 10  # number of nests
+    nnst = 5  # number of nests
     nloc = 3  # number of local points to include in the estimation
 
     # ----------------------------------------------------------------------------------------

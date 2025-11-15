@@ -5,10 +5,10 @@ import numpy as np
 
 def evaluate_allpoint(obs, est, threshold=0.1):
     # obs/est: [number of points, sample]
-    nstn = obs.shape[0]
+    nstn = obs.shape[1]
     metric_values = np.nan * np.zeros([nstn, 16])
     for i in range(nstn):
-        metric_values[i, :], metric_names = evaluate(obs[i, :], est[i, :], threshold)
+        metric_values[i, :], metric_names = evaluate(obs[:, i], est[:, i], threshold)
     return metric_values, metric_names
 
 

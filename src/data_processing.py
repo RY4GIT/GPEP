@@ -308,6 +308,7 @@ def merge_stndata_into_single_file(config):
     input_vars = config["input_vars"]
     target_vars = config["target_vars"]
     predictor_name_static_stn = config["predictor_name_static_stn"]
+    static_stn_vars = [var for var in predictor_name_static_stn]
 
     if "minRange_vars" in config:
         minRange_vars = config["minRange_vars"]
@@ -391,9 +392,6 @@ def merge_stndata_into_single_file(config):
 
         df_stn = pd.read_csv(input_stn_list)
         df_stn["mask"] = 1.0
-        static_stn_vars = [
-            var for var in predictor_name_static_stn if var in df_stn.columns
-        ]
 
         # Read all station data files into a list of dataframes
         all_dfs = []
@@ -418,13 +416,13 @@ def merge_stndata_into_single_file(config):
         coor_stn_vars = ["lat", "lon", "mask"] + static_stn_vars
         coords_stn = {var: df_stn[var].values for var in coor_stn_vars}
         coords_stn["time"] = all_dfs_concat.index
+        coords_stn["stn"] = df_stn["stnid"].values
         ds_stn = xr.Dataset(coords=coords_stn)
 
         # add input variables
         for var in input_vars:
             ds_stn[var] = xr.DataArray(all_dfs_concat.values, dims=("time", "stn"))
 
-    ########################################################################################################################
     # constrain variables
     for i in range(len(target_vars)):
         vari = target_vars[i]
@@ -476,7 +474,6 @@ def merge_stndata_into_single_file(config):
         else:
             print(f"Do not perform transformation for {target_vars[i]}")
 
-    ########################################################################################################################
     # save to output files
     encoding = {}
     for var in ds_stn.data_vars:
