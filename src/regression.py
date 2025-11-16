@@ -42,34 +42,34 @@ def weight_logistic_regression(nearinfo, weightnear, datanear, tarinfo):
     return poe
 
 
-def check_predictor_matrix_behavior(nearinfo, weightnear):
-    # check to see if the station predictor matrix will be well behaved
-    w_pcp_red = np.diag(np.squeeze(weightnear))
-    tx_red = np.transpose(nearinfo)
-    twx_red = np.matmul(tx_red, w_pcp_red)
-    tmp = np.matmul(twx_red, nearinfo)
-    vv = np.max(np.abs(tmp), axis=1)
-    if np.any(vv == 0):
-        flag = False  # bad performance
-    else:
-        flag = True  # good performance
-    return flag
+# def check_predictor_matrix_behavior(nearinfo, weightnear):
+#     # check to see if the station predictor matrix will be well behaved
+#     w_pcp_red = np.diag(np.squeeze(weightnear))
+#     tx_red = np.transpose(nearinfo)
+#     twx_red = np.matmul(tx_red, w_pcp_red)
+#     tmp = np.matmul(twx_red, nearinfo)
+#     vv = np.max(np.abs(tmp), axis=1)
+#     if np.any(vv == 0):
+#         flag = False  # bad performance
+#     else:
+#         flag = True  # good performance
+#     return flag
 
 
-###########################
-# regression using Python sklearn package: easier to use, but slower and a bit different from the above functions
-def sklearn_weight_linear_regression(nearinfo, weightnear, datanear, tarinfo):
-    model = LinearRegression()
-    model = model.fit(nearinfo, datanear, sample_weight=weightnear)
-    datatar = model.predict(tarinfo[np.newaxis, :])
-    return datatar
+# ###########################
+# # regression using Python sklearn package: easier to use, but slower and a bit different from the above functions
+# def sklearn_weight_linear_regression(nearinfo, weightnear, datanear, tarinfo):
+#     model = LinearRegression()
+#     model = model.fit(nearinfo, datanear, sample_weight=weightnear)
+#     datatar = model.predict(tarinfo[np.newaxis, :])
+#     return datatar
 
 
-def sklearn_weight_logistic_regression(nearinfo, weightnear, datanear, tarinfo):
-    model = LogisticRegression(solver="liblinear")
-    model = model.fit(nearinfo, datanear, sample_weight=weightnear)
-    poe = model.predict_proba(tarinfo[np.newaxis, :])[0, 1]
-    return poe
+# def sklearn_weight_logistic_regression(nearinfo, weightnear, datanear, tarinfo):
+#     model = LogisticRegression(solver="liblinear")
+#     model = model.fit(nearinfo, datanear, sample_weight=weightnear)
+#     poe = model.predict_proba(tarinfo[np.newaxis, :])[0, 1]
+#     return poe
 
 
 ########################################################################################################################
@@ -384,8 +384,8 @@ def flatten_list(lst):
     return flat_list
 
 
-########################################################################################################################
-# machine learning regression
+# ########################################################################################################################
+# # machine learning regression
 
 
 def train_and_return_test(
@@ -426,338 +426,339 @@ def train_and_return_test(
     return ytest
 
 
-def ML_regression_crossvalidation(
-    stn_data,
-    stn_predictor,
-    ml_model,
-    probflag,
-    ml_settings={},
-    dynamic_predictors={},
-    n_splits=10,
-):
-    t1 = time.time()
+# def ML_regression_crossvalidation(
+#     stn_data,
+#     stn_predictor,
+#     ml_model,
+#     probflag,
+#     ml_settings={},
+#     dynamic_predictors={},
+#     n_splits=10,
+# ):
+#     t1 = time.time()
 
-    if len(dynamic_predictors) == 0:
-        dynamic_predictors["flag"] = False
+#     if len(dynamic_predictors) == 0:
+#         dynamic_predictors["flag"] = False
 
-    # remove missing stations
-    nstn0, ntime = np.shape(stn_data)
-    estimates0 = np.nan * np.zeros([nstn0, ntime], dtype=np.float32)
-    nannum = np.sum(np.isnan(stn_data), axis=1)
-    indexmissing = nannum == stn_data.shape[1]
-    stn_data = stn_data[~indexmissing, :]
-    stn_predictor = stn_predictor[~indexmissing, :]
+#     # remove missing stations
+#     nstn0, ntime = np.shape(stn_data)
+#     estimates0 = np.nan * np.zeros([nstn0, ntime], dtype=np.float32)
+#     nannum = np.sum(np.isnan(stn_data), axis=1)
+#     indexmissing = nannum == stn_data.shape[1]
+#     stn_data = stn_data[~indexmissing, :]
+#     stn_predictor = stn_predictor[~indexmissing, :]
 
-    # cross-validation index
-    kf = KFold(n_splits=n_splits, shuffle=True, random_state=42)
-    kf.get_n_splits(stn_data)
+#     # cross-validation index
+#     kf = KFold(n_splits=n_splits, shuffle=True, random_state=42)
+#     kf.get_n_splits(stn_data)
 
-    nstn, ntime = np.shape(stn_data)
-    estimates = np.nan * np.zeros([nstn, ntime], dtype=np.float32)
+#     nstn, ntime = np.shape(stn_data)
+#     estimates = np.nan * np.zeros([nstn, ntime], dtype=np.float32)
 
-    for i, (train_index, test_index) in enumerate(kf.split(stn_predictor)):
-        for t in range(ntime):
-            stn_predictor_t = stn_predictor.copy()
-            if dynamic_predictors["flag"] == True:
-                xdata_add = dynamic_predictors["stn_predictor_dynamic"][:, t, :].T
-                stn_predictor_t = np.hstack(
-                    (stn_predictor_t, xdata_add[~indexmissing, :])
-                )
-            ytest = train_and_return_test(
-                stn_predictor_t[train_index, :],
-                stn_data[train_index, t],
-                stn_predictor_t[test_index, :],
-                ml_model,
-                probflag,
-                ml_settings,
-            )
-            estimates[test_index, t] = ytest
+#     for i, (train_index, test_index) in enumerate(kf.split(stn_predictor)):
+#         for t in range(ntime):
+#             stn_predictor_t = stn_predictor.copy()
+#             if dynamic_predictors["flag"] == True:
+#                 xdata_add = dynamic_predictors["stn_predictor_dynamic"][:, t, :].T
+#                 stn_predictor_t = np.hstack(
+#                     (stn_predictor_t, xdata_add[~indexmissing, :])
+#                 )
+#             ytest = train_and_return_test(
+#                 stn_predictor_t[train_index, :],
+#                 stn_data[train_index, t],
+#                 stn_predictor_t[test_index, :],
+#                 ml_model,
+#                 probflag,
+#                 ml_settings,
+#             )
+#             estimates[test_index, t] = ytest
 
-    estimates0[~indexmissing, :] = estimates
+#     estimates0[~indexmissing, :] = estimates
 
-    t2 = time.time()
-    print("Regression time cost (s):", t2 - t1)
-    return np.squeeze(estimates0)
-
-
-def init_worker_sklearn(
-    stn_data,
-    stn_predictor,
-    tar_predictor,
-    ml_model,
-    probflag,
-    ml_settings,
-    dynamic_predictors,
-    train_index,
-    test_index,
-    indexmissing,
-    randseed=123456789,
-):
-    # Using a dictionary is not strictly necessary. You can also
-    # use global variables.
-    global mppool_ini_dict_sk
-    mppool_ini_dict_sk = {}
-    mppool_ini_dict_sk["stn_data"] = stn_data
-    mppool_ini_dict_sk["stn_predictor"] = stn_predictor
-    mppool_ini_dict_sk["tar_predictor"] = tar_predictor
-    mppool_ini_dict_sk["ml_model"] = ml_model
-    mppool_ini_dict_sk["ml_settings"] = ml_settings
-    mppool_ini_dict_sk["probflag"] = probflag
-    mppool_ini_dict_sk["train_index"] = train_index
-    mppool_ini_dict_sk["test_index"] = test_index
-    mppool_ini_dict_sk["dynamic_predictors"] = dynamic_predictors
-    mppool_ini_dict_sk["indexmissing"] = indexmissing
-    mppool_ini_dict_sk["randseed"] = randseed
+#     t2 = time.time()
+#     print("Regression time cost (s):", t2 - t1)
+#     return np.squeeze(estimates0)
 
 
-def train_and_return_test_cv_timestep(t):
-    stn_data = mppool_ini_dict_sk["stn_data"]
-    stn_predictor = mppool_ini_dict_sk["stn_predictor"]
-    ml_model = mppool_ini_dict_sk["ml_model"]
-    ml_settings = mppool_ini_dict_sk["ml_settings"]
-    probflag = mppool_ini_dict_sk["probflag"]
-    train_indexall = mppool_ini_dict_sk["train_index"]
-    test_indexall = mppool_ini_dict_sk["test_index"]
-    dynamic_predictors = mppool_ini_dict_sk["dynamic_predictors"]
-    indexmissing = mppool_ini_dict_sk["indexmissing"]
-    randseed = mppool_ini_dict_sk["randseed"]
-
-    np.random.seed(randseed + t)
-
-    nstn, ntime = np.shape(stn_data)
-    estimates = np.nan * np.zeros(nstn, dtype=np.float32)
-
-    for train_index, test_index in zip(train_indexall, test_indexall):
-        stn_predictor_t = stn_predictor.copy()
-        if dynamic_predictors["flag"] == True:
-            xdata_add = dynamic_predictors["stn_predictor_dynamic"][:, t, :].T
-            stn_predictor_t = np.hstack((stn_predictor_t, xdata_add[~indexmissing, :]))
-        ytest = train_and_return_test(
-            stn_predictor_t[train_index, :],
-            stn_data[train_index, t],
-            stn_predictor_t[test_index, :],
-            ml_model,
-            probflag,
-            ml_settings,
-        )
-        estimates[test_index] = ytest
-
-    return estimates
+# def init_worker_sklearn(
+#     stn_data,
+#     stn_predictor,
+#     tar_predictor,
+#     ml_model,
+#     probflag,
+#     ml_settings,
+#     dynamic_predictors,
+#     train_index,
+#     test_index,
+#     indexmissing,
+#     randseed=123456789,
+# ):
+#     # Using a dictionary is not strictly necessary. You can also
+#     # use global variables.
+#     global mppool_ini_dict_sk
+#     mppool_ini_dict_sk = {}
+#     mppool_ini_dict_sk["stn_data"] = stn_data
+#     mppool_ini_dict_sk["stn_predictor"] = stn_predictor
+#     mppool_ini_dict_sk["tar_predictor"] = tar_predictor
+#     mppool_ini_dict_sk["ml_model"] = ml_model
+#     mppool_ini_dict_sk["ml_settings"] = ml_settings
+#     mppool_ini_dict_sk["probflag"] = probflag
+#     mppool_ini_dict_sk["train_index"] = train_index
+#     mppool_ini_dict_sk["test_index"] = test_index
+#     mppool_ini_dict_sk["dynamic_predictors"] = dynamic_predictors
+#     mppool_ini_dict_sk["indexmissing"] = indexmissing
+#     mppool_ini_dict_sk["randseed"] = randseed
 
 
-def ML_regression_crossvalidation_multiprocessing(
-    stn_data,
-    stn_predictor,
-    ml_model,
-    probflag,
-    ml_settings={},
-    dynamic_predictors={},
-    n_splits=10,
-    num_processes=1,
-    master_seed=123456789,
-):
-    t1 = time.time()
+# def train_and_return_test_cv_timestep(t):
+#     stn_data = mppool_ini_dict_sk["stn_data"]
+#     stn_predictor = mppool_ini_dict_sk["stn_predictor"]
+#     ml_model = mppool_ini_dict_sk["ml_model"]
+#     ml_settings = mppool_ini_dict_sk["ml_settings"]
+#     probflag = mppool_ini_dict_sk["probflag"]
+#     train_indexall = mppool_ini_dict_sk["train_index"]
+#     test_indexall = mppool_ini_dict_sk["test_index"]
+#     dynamic_predictors = mppool_ini_dict_sk["dynamic_predictors"]
+#     indexmissing = mppool_ini_dict_sk["indexmissing"]
+#     randseed = mppool_ini_dict_sk["randseed"]
 
-    if len(dynamic_predictors) == 0:
-        dynamic_predictors["flag"] = False
+#     np.random.seed(randseed + t)
 
-    # remove missing stations
-    nstn0, ntime = np.shape(stn_data)
-    estimates0 = np.nan * np.zeros([nstn0, ntime], dtype=np.float32)
+#     nstn, ntime = np.shape(stn_data)
+#     estimates = np.nan * np.zeros(nstn, dtype=np.float32)
 
-    nannum = np.sum(np.isnan(stn_data), axis=1)
-    indexmissing = nannum == stn_data.shape[1]
-    stn_data = stn_data[~indexmissing, :]
-    stn_predictor = stn_predictor[~indexmissing, :]
+#     for train_index, test_index in zip(train_indexall, test_indexall):
+#         stn_predictor_t = stn_predictor.copy()
+#         if dynamic_predictors["flag"] == True:
+#             xdata_add = dynamic_predictors["stn_predictor_dynamic"][:, t, :].T
+#             stn_predictor_t = np.hstack((stn_predictor_t, xdata_add[~indexmissing, :]))
+#         ytest = train_and_return_test(
+#             stn_predictor_t[train_index, :],
+#             stn_data[train_index, t],
+#             stn_predictor_t[test_index, :],
+#             ml_model,
+#             probflag,
+#             ml_settings,
+#         )
+#         estimates[test_index] = ytest
 
-    # cross-validation index
-    kf = KFold(n_splits=n_splits, shuffle=True)
-    kf.get_n_splits(stn_data)
-    train_index = []
-    test_index = []
-    for i, (ind1, ind2) in enumerate(kf.split(stn_predictor)):
-        train_index.append(ind1)
-        test_index.append(ind2)
-
-    # parallel regression
-    items = [(t,) for t in range(ntime)]
-    with Pool(
-        processes=num_processes,
-        initializer=init_worker_sklearn,
-        initargs=(
-            stn_data,
-            stn_predictor,
-            [],
-            ml_model,
-            probflag,
-            ml_settings,
-            dynamic_predictors,
-            train_index,
-            test_index,
-            indexmissing,
-            master_seed,
-        ),
-    ) as pool:
-        result = pool.starmap(train_and_return_test_cv_timestep, items)
-
-    # fill estimates to matrix
-    nstn, ntime = np.shape(stn_data)
-    estimates = np.nan * np.zeros([nstn, ntime], dtype=np.float32)
-    for i in range(len(items)):
-        indi = items[i]
-        estimates[:, indi[0]] = result[i]
-
-    estimates0[~indexmissing, :] = estimates
-
-    t2 = time.time()
-    print("Regression time cost (sec):", t2 - t1)
-    return np.squeeze(estimates0)
+#     return estimates
 
 
-def ML_regression_grid(
-    stn_data,
-    stn_predictor,
-    tar_predictor,
-    ml_model,
-    probflag,
-    ml_settings={},
-    dynamic_predictors={},
-):
-    t1 = time.time()
+# def ML_regression_crossvalidation_multiprocessing(
+#     stn_data,
+#     stn_predictor,
+#     ml_model,
+#     probflag,
+#     ml_settings={},
+#     dynamic_predictors={},
+#     n_splits=10,
+#     num_processes=1,
+#     master_seed=123456789,
+# ):
+#     t1 = time.time()
 
-    if len(dynamic_predictors) == 0:
-        dynamic_predictors["flag"] = False
+#     if len(dynamic_predictors) == 0:
+#         dynamic_predictors["flag"] = False
 
-    # remove missing stations
-    nstn, ntime = np.shape(stn_data)
-    nrow, ncol, npred = np.shape(tar_predictor)
-    estimates = np.nan * np.zeros([nrow, ncol, ntime], dtype=np.float32)
+#     # remove missing stations
+#     nstn0, ntime = np.shape(stn_data)
+#     estimates0 = np.nan * np.zeros([nstn0, ntime], dtype=np.float32)
 
-    tar_predictor_resh = np.reshape(tar_predictor, [nrow * ncol, npred])
+#     nannum = np.sum(np.isnan(stn_data), axis=1)
+#     indexmissing = nannum == stn_data.shape[1]
+#     stn_data = stn_data[~indexmissing, :]
+#     stn_predictor = stn_predictor[~indexmissing, :]
 
-    for t in range(ntime):
-        stn_predictor_t = stn_predictor.copy()
-        tar_predictor_t = tar_predictor_resh.copy()
+#     # cross-validation index
+#     kf = KFold(n_splits=n_splits, shuffle=True)
+#     kf.get_n_splits(stn_data)
+#     train_index = []
+#     test_index = []
+#     for i, (ind1, ind2) in enumerate(kf.split(stn_predictor)):
+#         train_index.append(ind1)
+#         test_index.append(ind2)
 
-        if dynamic_predictors["flag"] == True:
-            xdata_add1 = dynamic_predictors["stn_predictor_dynamic"][:, t, :].T
-            stn_predictor_t = np.hstack((stn_predictor_t, xdata_add1))
+#     # parallel regression
+#     items = [(t,) for t in range(ntime)]
+#     with Pool(
+#         processes=num_processes,
+#         initializer=init_worker_sklearn,
+#         initargs=(
+#             stn_data,
+#             stn_predictor,
+#             [],
+#             ml_model,
+#             probflag,
+#             ml_settings,
+#             dynamic_predictors,
+#             train_index,
+#             test_index,
+#             indexmissing,
+#             master_seed,
+#         ),
+#     ) as pool:
+#         result = pool.starmap(train_and_return_test_cv_timestep, items)
 
-            xdata_add2 = dynamic_predictors["tar_predictor_dynamic"][:, t, :, :]
-            ndyn = xdata_add2.shape[0]
-            xdata_add2 = np.reshape(xdata_add2, [ndyn, nrow * ncol]).T
-            tar_predictor_t = np.hstack((tar_predictor_t, xdata_add2))
+#     # fill estimates to matrix
+#     nstn, ntime = np.shape(stn_data)
+#     estimates = np.nan * np.zeros([nstn, ntime], dtype=np.float32)
+#     for i in range(len(items)):
+#         indi = items[i]
+#         estimates[:, indi[0]] = result[i]
 
-        ytest = train_and_return_test(
-            stn_predictor_t,
-            stn_data[:, t],
-            tar_predictor_t,
-            ml_model,
-            probflag,
-            ml_settings,
-        )
-        ytest = np.reshape(ytest, [nrow, ncol])
-        estimates[:, :, t] = ytest
+#     estimates0[~indexmissing, :] = estimates
 
-    t2 = time.time()
-    print("Regression time cost (sec):", t2 - t1)
-    return np.squeeze(estimates)
-
-
-def train_and_return_test_grid_timestep(t):
-    stn_data = mppool_ini_dict_sk["stn_data"]
-    stn_predictor = mppool_ini_dict_sk["stn_predictor"]
-    ml_model = mppool_ini_dict_sk["ml_model"]
-    ml_settings = mppool_ini_dict_sk["ml_settings"]
-    probflag = mppool_ini_dict_sk["probflag"]
-    dynamic_predictors = mppool_ini_dict_sk["dynamic_predictors"]
-    tar_predictor = mppool_ini_dict_sk["tar_predictor"]
-    randseed = mppool_ini_dict_sk["randseed"]
-
-    np.random.seed(randseed + t)
-
-    nstn, ntime = np.shape(stn_data)
-    nrow, ncol, npred = np.shape(tar_predictor)
-    tar_predictor_resh = np.reshape(tar_predictor, [nrow * ncol, npred])
-
-    stn_predictor_t = stn_predictor.copy()
-    tar_predictor_t = tar_predictor_resh.copy()
-
-    if dynamic_predictors["flag"] == True:
-        xdata_add1 = dynamic_predictors["stn_predictor_dynamic"][:, t, :].T
-        stn_predictor_t = np.hstack((stn_predictor_t, xdata_add1))
-
-        xdata_add2 = dynamic_predictors["tar_predictor_dynamic"][:, t, :, :]
-        ndyn = xdata_add2.shape[0]
-        xdata_add2 = np.reshape(xdata_add2, [ndyn, nrow * ncol]).T
-        tar_predictor_t = np.hstack((tar_predictor_t, xdata_add2))
-
-    ytest = train_and_return_test(
-        stn_predictor_t,
-        stn_data[:, t],
-        tar_predictor_t,
-        ml_model,
-        probflag,
-        ml_settings,
-    )
-    ytest = np.reshape(ytest, [nrow, ncol])
-
-    return ytest
+#     t2 = time.time()
+#     print("Regression time cost (sec):", t2 - t1)
+#     return np.squeeze(estimates0)
 
 
-def ML_regression_grid_multiprocessing(
-    stn_data,
-    stn_predictor,
-    tar_predictor,
-    ml_model,
-    probflag,
-    ml_settings={},
-    dynamic_predictors={},
-    num_processes=1,
-    master_seed=123456789,
-):
-    t1 = time.time()
+# def ML_regression_grid(
+#     stn_data,
+#     stn_predictor,
+#     tar_predictor,
+#     ml_model,
+#     probflag,
+#     ml_settings={},
+#     dynamic_predictors={},
+# ):
+#     t1 = time.time()
 
-    if len(dynamic_predictors) == 0:
-        dynamic_predictors["flag"] = False
+#     if len(dynamic_predictors) == 0:
+#         dynamic_predictors["flag"] = False
 
-    # remove missing stations
-    nstn, ntime = np.shape(stn_data)
-    nrow, ncol, npred = np.shape(tar_predictor)
-    estimates = np.nan * np.zeros([nrow, ncol, ntime], dtype=np.float32)
+#     # remove missing stations
+#     nstn, ntime = np.shape(stn_data)
+#     nrow, ncol, npred = np.shape(tar_predictor)
+#     estimates = np.nan * np.zeros([nrow, ncol, ntime], dtype=np.float32)
 
-    # parallel regression
-    items = [(t,) for t in range(ntime)]
-    with Pool(
-        processes=num_processes,
-        initializer=init_worker_sklearn,
-        initargs=(
-            stn_data,
-            stn_predictor,
-            tar_predictor,
-            ml_model,
-            probflag,
-            ml_settings,
-            dynamic_predictors,
-            [],
-            [],
-            [],
-            master_seed,
-        ),
-    ) as pool:
-        result = pool.starmap(train_and_return_test_grid_timestep, items)
+#     tar_predictor_resh = np.reshape(tar_predictor, [nrow * ncol, npred])
 
-    # fill estimates to matrix
-    for i in range(len(items)):
-        indi = items[i]
-        estimates[:, :, indi[0]] = result[i]
+#     for t in range(ntime):
+#         stn_predictor_t = stn_predictor.copy()
+#         tar_predictor_t = tar_predictor_resh.copy()
 
-    t2 = time.time()
-    print("Regression time cost (sec):", t2 - t1)
-    return np.squeeze(estimates)
+#         if dynamic_predictors["flag"] == True:
+#             xdata_add1 = dynamic_predictors["stn_predictor_dynamic"][:, t, :].T
+#             stn_predictor_t = np.hstack((stn_predictor_t, xdata_add1))
+
+#             xdata_add2 = dynamic_predictors["tar_predictor_dynamic"][:, t, :, :]
+#             ndyn = xdata_add2.shape[0]
+#             xdata_add2 = np.reshape(xdata_add2, [ndyn, nrow * ncol]).T
+#             tar_predictor_t = np.hstack((tar_predictor_t, xdata_add2))
+
+#         ytest = train_and_return_test(
+#             stn_predictor_t,
+#             stn_data[:, t],
+#             tar_predictor_t,
+#             ml_model,
+#             probflag,
+#             ml_settings,
+#         )
+#         ytest = np.reshape(ytest, [nrow, ncol])
+#         estimates[:, :, t] = ytest
+
+#     t2 = time.time()
+#     print("Regression time cost (sec):", t2 - t1)
+#     return np.squeeze(estimates)
+
+
+# def train_and_return_test_grid_timestep(t):
+#     stn_data = mppool_ini_dict_sk["stn_data"]
+#     stn_predictor = mppool_ini_dict_sk["stn_predictor"]
+#     ml_model = mppool_ini_dict_sk["ml_model"]
+#     ml_settings = mppool_ini_dict_sk["ml_settings"]
+#     probflag = mppool_ini_dict_sk["probflag"]
+#     dynamic_predictors = mppool_ini_dict_sk["dynamic_predictors"]
+#     tar_predictor = mppool_ini_dict_sk["tar_predictor"]
+#     randseed = mppool_ini_dict_sk["randseed"]
+
+#     np.random.seed(randseed + t)
+
+#     nstn, ntime = np.shape(stn_data)
+#     nrow, ncol, npred = np.shape(tar_predictor)
+#     tar_predictor_resh = np.reshape(tar_predictor, [nrow * ncol, npred])
+
+#     stn_predictor_t = stn_predictor.copy()
+#     tar_predictor_t = tar_predictor_resh.copy()
+
+#     if dynamic_predictors["flag"] == True:
+#         xdata_add1 = dynamic_predictors["stn_predictor_dynamic"][:, t, :].T
+#         stn_predictor_t = np.hstack((stn_predictor_t, xdata_add1))
+
+#         xdata_add2 = dynamic_predictors["tar_predictor_dynamic"][:, t, :, :]
+#         ndyn = xdata_add2.shape[0]
+#         xdata_add2 = np.reshape(xdata_add2, [ndyn, nrow * ncol]).T
+#         tar_predictor_t = np.hstack((tar_predictor_t, xdata_add2))
+
+#     ytest = train_and_return_test(
+#         stn_predictor_t,
+#         stn_data[:, t],
+#         tar_predictor_t,
+#         ml_model,
+#         probflag,
+#         ml_settings,
+#     )
+#     ytest = np.reshape(ytest, [nrow, ncol])
+
+#     return ytest
+
+
+# def ML_regression_grid_multiprocessing(
+#     stn_data,
+#     stn_predictor,
+#     tar_predictor,
+#     ml_model,
+#     probflag,
+#     ml_settings={},
+#     dynamic_predictors={},
+#     num_processes=1,
+#     master_seed=123456789,
+# ):
+#     t1 = time.time()
+
+#     if len(dynamic_predictors) == 0:
+#         dynamic_predictors["flag"] = False
+
+#     # remove missing stations
+#     nstn, ntime = np.shape(stn_data)
+#     nrow, ncol, npred = np.shape(tar_predictor)
+#     estimates = np.nan * np.zeros([nrow, ncol, ntime], dtype=np.float32)
+
+#     # parallel regression
+#     items = [(t,) for t in range(ntime)]
+#     with Pool(
+#         processes=num_processes,
+#         initializer=init_worker_sklearn,
+#         initargs=(
+#             stn_data,
+#             stn_predictor,
+#             tar_predictor,
+#             ml_model,
+#             probflag,
+#             ml_settings,
+#             dynamic_predictors,
+#             [],
+#             [],
+#             [],
+#             master_seed,
+#         ),
+#     ) as pool:
+#         result = pool.starmap(train_and_return_test_grid_timestep, items)
+
+#     # fill estimates to matrix
+#     for i in range(len(items)):
+#         indi = items[i]
+#         estimates[:, :, indi[0]] = result[i]
+
+#     t2 = time.time()
+#     print("Regression time cost (sec):", t2 - t1)
+#     return np.squeeze(estimates)
 
 
 ########################################################################################################################
+# WEIGHTED REGRESSION
 # parallel version of loop regression: independent processes and large memory use if there are many cpus
 
 
@@ -799,12 +800,13 @@ def init_worker(
     # from sklearn.linear_model import Ridge
 
 
-def regression_for_blocks(r1, r2, c1, c2, data=None):
+def regression_for_a_chunk(r1, r2, c1, c2, data=None):
     """
     Train regression model based on station data (weighted based on nearest stations)
     and use it to predict the values of the target grid cells at each time step.
     """
     if data is None:
+        # Parallel regression (using global variables)
         stn_data = mppool_ini_dict["stn_data"]
         stn_predictor = mppool_ini_dict["stn_predictor"]
         tar_nearIndex = mppool_ini_dict["tar_nearIndex"]
@@ -815,6 +817,7 @@ def regression_for_blocks(r1, r2, c1, c2, data=None):
         settings = mppool_ini_dict["settings"]
         dynamic_predictors = mppool_ini_dict["dynamic_predictors"]
     else:
+        # Serial
         stn_data = data["stn_data"]
         stn_predictor = data["stn_predictor"]
         tar_nearIndex = data["tar_nearIndex"]
@@ -828,16 +831,16 @@ def regression_for_blocks(r1, r2, c1, c2, data=None):
     (ntime, nstn) = np.shape(stn_data)
     ydata_tar = np.nan * np.zeros([r2 - r1, c2 - c1, ntime])
 
-    # Loop through each grid cell in the block
+    # Loop through each grid cell in the chunk
     for r in range(r1, r2):
         for c in range(c1, c2):
             # prepare xdata and sample weight for training the regression model
             # tar_nearIndex (nrow, ncol, stn)
-            # tar_nearWeight (nrow, ncol, stn)
             sample_nearIndex = tar_nearIndex[r, c, :]
             index_valid = sample_nearIndex >= 0
 
             if np.sum(index_valid) > 0:
+                # tar_nearWeight (nrow, ncol, stn)
                 # stn_predictor (stn, predictor)
                 # tar_predictor(nrow, ncol, predictor)
                 # xdata_near0 (stn, predictor)
@@ -887,7 +890,7 @@ def regression_for_blocks(r1, r2, c1, c2, data=None):
                                     xdata_near = xdata_near_try
                                     xdata_g = xdata_g_try
 
-                        # regression
+                        # Main regression part
                         if method == "Linear":
                             ydata_tar[r - r1, c - c1, t] = weight_linear_regression(
                                 y=ydata_near,
@@ -899,26 +902,27 @@ def regression_for_blocks(r1, r2, c1, c2, data=None):
                             ydata_tar[r - r1, c - c1, t] = weight_logistic_regression(
                                 xdata_near, sample_weight, ydata_near, xdata_g
                             )
-                        else:
-                            ydata_tar[r - r1, c - c1, t] = train_and_return_test(
-                                xdata_near,
-                                ydata_near,
-                                xdata_g,
-                                method,
-                                probflag,
-                                settings,
-                                sample_weight,
-                            )
                         # else:
-                        #     sys.exit(f'Unknonwn regression method: {method}')
+                        # Machine learing methods
+                        #     ydata_tar[r - r1, c - c1, t] = train_and_return_test(
+                        #         xdata_near,
+                        #         ydata_near,
+                        #         xdata_g,
+                        #         method,
+                        #         probflag,
+                        #         settings,
+                        #         sample_weight,
+                        #     )
+                        else:
+                            sys.exit(f"Unknonwn regression method: {method}")
+                        # End of main regression part
 
-                        # apply max limit
-                        # ydata_near
+                        # apply max limit (not implemented yet)
 
     return ydata_tar
 
 
-def loop_regression_2Dor3D_multiprocessing(
+def loop_regression(
     stn_data,
     stn_predictor,
     tar_nearIndex,
@@ -940,11 +944,11 @@ def loop_regression_2Dor3D_multiprocessing(
     (ntime, nstn) = np.shape(stn_data)
     nrow, ncol, nearmax = np.shape(tar_nearIndex)
 
-    # Create a list of items to process
+    # Create a list of chunks to process
     if nrow > ncol:
-        items = [(r, r + 1, 0, ncol) for r in range(nrow)]
+        chunks = [(r, r + 1, 0, ncol) for r in range(nrow)]
     else:
-        items = [(0, nrow, c, c + 1) for c in range(ncol)]
+        chunks = [(0, nrow, c, c + 1) for c in range(ncol)]
 
     # # Serial regression
     # result = #fix dimension
@@ -959,7 +963,7 @@ def loop_regression_2Dor3D_multiprocessing(
     #     data["probflag"] = probflag
     #     data["settings"] = settings
     #     data["dynamic_predictors"] = dynamic_predictors
-    #     result[item] = regression_for_blocks(
+    #     result[item] = regression_for_a_chunk(
     #         item[0], item[1], item[2], item[3], data=data
     #     )
 
@@ -980,13 +984,12 @@ def loop_regression_2Dor3D_multiprocessing(
             importmodules,
         ),
     ) as pool:
-        result = pool.starmap(regression_for_blocks, items)
+        result = pool.starmap(regression_for_a_chunk, chunks)
 
     # fill estimates to matrix
     estimates = np.nan * np.zeros([nrow, ncol, ntime], dtype=np.float32)
-    for i in range(len(items)):
-        indi = items[i]
-        estimates[indi[0] : indi[1], indi[2] : indi[3], :] = result[i]
+    for i, chunk in enumerate(chunks):
+        estimates[chunk[0] : chunk[1], chunk[2] : chunk[3], :] = result[i]
 
     t2 = time.time()
     print("Regression time cost (sec):", t2 - t1)
@@ -998,6 +1001,10 @@ def loop_regression_2Dor3D_multiprocessing(
 
 def main_regression(config, target):
     """Main function for regression"""
+
+    ########################################################################################################################
+    # PREPARATION
+    ########################################################################################################################
 
     # target: loo (leave one out station) or grid
     t1 = time.time()
@@ -1295,6 +1302,10 @@ def main_regression(config, target):
             ds_dynamic_tar = ds_dynamic_stn.copy()
 
     ########################################################################################################################
+    # MAIN REGRESSION
+    ########################################################################################################################
+
+    ########################################################################################################################
     # loop variables
     for vn in range(len(target_vars)):
         var_name = target_vars[vn]
@@ -1348,21 +1359,21 @@ def main_regression(config, target):
                     predictor_name_static_stn[i]
                 ].values
 
-        # near information
+        ### near information ###
         with xr.open_dataset(file_stn_nearinfo) as ds_nearinfo:
             # nearDistance = ds_nearinfo['nearDistance_InStn_' + var_name].values
             vtmp = f"nearIndex_{near_keyword}_{var_name}"
             if vtmp in ds_nearinfo.data_vars:
-                nearIndex = ds_nearinfo[vtmp].values
+                if target == "grid":
+                    nearIndex = ds_nearinfo[vtmp].values.copy()
+                elif target == "cval":
+                    nearIndex = ds_nearinfo[vtmp][np.newaxis, :, :].copy()
             else:
                 sys.exit(
                     f"Cannot find nearIndex_{near_keyword}_{var_name} in {file_stn_nearinfo}"
                 )
 
-            if target == "cval":
-                nearIndex = nearIndex[np.newaxis, :, :]
-
-        # predictor information
+        ### predictor information ###
         if target == "grid":
             with xr.open_dataset(file_stn_nearinfo) as ds_nearinfo:
                 nrow, ncol, nearmax = np.shape(nearIndex)
@@ -1372,22 +1383,22 @@ def main_regression(config, target):
                 for i in range(len(predictor_name_static_target)):
                     prei = ds_nearinfo[predictor_name_static_target[i]].values
                     predictor_static_target[:, :, i + 1] = prei
-        else:
-            predictor_static_target = predictor_static_stn.copy()
-            predictor_static_target = predictor_static_target[np.newaxis, :, :]
 
-        # weights
+        elif target == "cval":
+            predictor_static_target = predictor_static_stn[np.newaxis, :, :].copy()
+
+        ### weights ###
         with xr.open_dataset(file_stn_weight) as ds_weight:
             vtmp = f"nearWeight_{near_keyword}_{var_name}"
             if vtmp in ds_weight.data_vars:
-                nearWeight = ds_weight[vtmp].values
+                if target == "grid":
+                    nearWeight = ds_weight[vtmp].values.copy()
+                elif target == "cval":
+                    nearWeight = ds_weight[vtmp][np.newaxis, :, :].copy()
             else:
                 sys.exit(
-                    f"Cannot find nearIndex_{near_keyword}_{var_name} in {file_stn_weight}"
+                    f"Cannot find nearWeight_{near_keyword}_{var_name} in {file_stn_weight}"
                 )
-
-            if target == "cval":
-                nearWeight = nearWeight[np.newaxis, :, :]
 
         ########################################################################################################################
         # produce predictor matrix for regression
@@ -1424,7 +1435,7 @@ def main_regression(config, target):
         if gridcore_continuous.startswith("LWR:"):
             # Transform max limit if necessary
             if var_name in target_vars_max_constrain:
-                print("(Pending) Perform max constraint for ", var_name)
+                print("Perform max constraint for ", var_name)
 
                 if len(transform_vars[vn]) > 0:
                     maxlimit = {
@@ -1437,8 +1448,9 @@ def main_regression(config, target):
             else:
                 maxlimit = {"flag": False}
 
+            print("Perform regression for ", var_name)
             # Get estimates via regression
-            estimates = loop_regression_2Dor3D_multiprocessing(
+            estimates = loop_regression(
                 stn_value,
                 stn_predictor,
                 nearIndex,
@@ -1589,7 +1601,7 @@ def main_regression(config, target):
 
         #     probflag = True
         #     if gridcore_classification.startswith("LWR:"):
-        #         estimates = loop_regression_2Dor3D_multiprocessing(
+        #         estimates = loop_regression(
         #             stn_value,
         #             stn_predictor,
         #             nearIndex,
