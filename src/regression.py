@@ -11,7 +11,7 @@ from sklearn.linear_model import LogisticRegression
 from evaluate import evaluate_allpoint
 from scipy.interpolate import griddata, RegularGridInterpolator
 from sklearn.model_selection import KFold
-
+from tqdm import tqdm
 # from functions import (
 #     ludcmp,
 #     lubksb,
@@ -772,7 +772,6 @@ def init_worker(
     settings,
     dynamic_predictors,
     importmodules,
-    maxlimit,
 ):
     # Using a dictionary is not strictly necessary. You can also
     # use global variables.
@@ -787,7 +786,6 @@ def init_worker(
     mppool_ini_dict["probflag"] = probflag
     mppool_ini_dict["settings"] = settings
     mppool_ini_dict["dynamic_predictors"] = dynamic_predictors
-    mppool_ini_dict["maxlimit"] = maxlimit
 
     for im in importmodules:
         if "." in im:
@@ -801,40 +799,60 @@ def init_worker(
     # from sklearn.linear_model import Ridge
 
 
-def regression_for_blocks(r1, r2, c1, c2):
-    stn_data = mppool_ini_dict["stn_data"]
-    stn_predictor = mppool_ini_dict["stn_predictor"]
-    tar_nearIndex = mppool_ini_dict["tar_nearIndex"]
-    tar_nearWeight = mppool_ini_dict["tar_nearWeight"]
-    tar_predictor = mppool_ini_dict["tar_predictor"]
-    method = mppool_ini_dict["method"]
-    probflag = mppool_ini_dict["probflag"]
-    settings = mppool_ini_dict["settings"]
-    dynamic_predictors = mppool_ini_dict["dynamic_predictors"]
-    maxlimit = mppool_ini_dict["maxlimit"]
+def regression_for_blocks(r1, r2, c1, c2, data=None):
+    """
+    Train regression model based on station data (weighted based on nearest stations)
+    and use it to predict the values of the target grid cells at each time step.
+    """
+    if data is None:
+        stn_data = mppool_ini_dict["stn_data"]
+        stn_predictor = mppool_ini_dict["stn_predictor"]
+        tar_nearIndex = mppool_ini_dict["tar_nearIndex"]
+        tar_nearWeight = mppool_ini_dict["tar_nearWeight"]
+        tar_predictor = mppool_ini_dict["tar_predictor"]
+        method = mppool_ini_dict["method"]
+        probflag = mppool_ini_dict["probflag"]
+        settings = mppool_ini_dict["settings"]
+        dynamic_predictors = mppool_ini_dict["dynamic_predictors"]
+    else:
+        stn_data = data["stn_data"]
+        stn_predictor = data["stn_predictor"]
+        tar_nearIndex = data["tar_nearIndex"]
+        tar_nearWeight = data["tar_nearWeight"]
+        tar_predictor = data["tar_predictor"]
+        method = data["method"]
+        probflag = data["probflag"]
+        settings = data["settings"]
+        dynamic_predictors = data["dynamic_predictors"]
 
-    nstn, ntime = np.shape(stn_data)
+    (ntime, nstn) = np.shape(stn_data)
     ydata_tar = np.nan * np.zeros([r2 - r1, c2 - c1, ntime])
 
+    # Loop through each grid cell in the block
     for r in range(r1, r2):
         for c in range(c1, c2):
-            # prepare xdata and sample weight for training and weights of neighboring stations
+            # prepare xdata and sample weight for training the regression model
+            # tar_nearIndex (nrow, ncol, stn)
+            # tar_nearWeight (nrow, ncol, stn)
             sample_nearIndex = tar_nearIndex[r, c, :]
             index_valid = sample_nearIndex >= 0
 
             if np.sum(index_valid) > 0:
+                # stn_predictor (stn, predictor)
+                # tar_predictor(nrow, ncol, predictor)
+                # xdata_near0 (stn, predictor)
+                # xdata_g0 (predictor)
+
                 sample_nearIndex = sample_nearIndex[index_valid]
-
                 sample_weight = tar_nearWeight[r, c, :][index_valid]
-
                 xdata_near0 = stn_predictor[sample_nearIndex, :]
                 xdata_g0 = tar_predictor[r, c, :]
 
                 # interpolation for every time step
-                for d in range(ntime):
-                    ydata_near = np.squeeze(stn_data[sample_nearIndex, d])
+                for t in range(ntime):
+                    ydata_near = np.squeeze(stn_data[t, sample_nearIndex])
                     if len(np.unique(ydata_near)) == 1:  # e.g., for prcp, all zero
-                        ydata_tar[r - r1, c - c1, d] = ydata_near[0]
+                        ydata_tar[r - r1, c - c1, t] = ydata_near[0]
                     else:
                         # add dynamic predictors if flag is true and predictors are good
                         xdata_near = xdata_near0
@@ -843,9 +861,9 @@ def regression_for_blocks(r1, r2, c1, c2):
                         if dynamic_predictors["flag"] == True:
                             xdata_near_add = dynamic_predictors[
                                 "stn_predictor_dynamic"
-                            ][:, d, sample_nearIndex].T
+                            ][:, t, sample_nearIndex].T
                             xdata_g_add = dynamic_predictors["tar_predictor_dynamic"][
-                                :, d, r, c
+                                :, t, r, c
                             ]
                             if np.all(~np.isnan(xdata_near_add)) and np.all(
                                 ~np.isnan(xdata_g_add)
@@ -871,15 +889,18 @@ def regression_for_blocks(r1, r2, c1, c2):
 
                         # regression
                         if method == "Linear":
-                            ydata_tar[r - r1, c - c1, d] = weight_linear_regression(
-                                xdata_near, sample_weight, ydata_near, xdata_g
+                            ydata_tar[r - r1, c - c1, t] = weight_linear_regression(
+                                y=ydata_near,
+                                X=xdata_near,
+                                weights=sample_weight,
+                                x_test=xdata_g,
                             )
                         elif method == "Logistic":
-                            ydata_tar[r - r1, c - c1, d] = weight_logistic_regression(
+                            ydata_tar[r - r1, c - c1, t] = weight_logistic_regression(
                                 xdata_near, sample_weight, ydata_near, xdata_g
                             )
                         else:
-                            ydata_tar[r - r1, c - c1, d] = train_and_return_test(
+                            ydata_tar[r - r1, c - c1, t] = train_and_return_test(
                                 xdata_near,
                                 ydata_near,
                                 xdata_g,
@@ -916,16 +937,33 @@ def loop_regression_2Dor3D_multiprocessing(
     if len(dynamic_predictors) == 0:
         dynamic_predictors["flag"] = False
 
-    nstn, ntime = np.shape(stn_data)
+    (ntime, nstn) = np.shape(stn_data)
     nrow, ncol, nearmax = np.shape(tar_nearIndex)
 
-    # parallel regression
-    # items = [(r, r + 1, c, c + 1) for r in range(nrow) for c in range(ncol)] # range(r, r+1), range(c, c+1)
+    # Create a list of items to process
     if nrow > ncol:
         items = [(r, r + 1, 0, ncol) for r in range(nrow)]
     else:
         items = [(0, nrow, c, c + 1) for c in range(ncol)]
 
+    # # Serial regression
+    # result = #fix dimension
+    # for item in tqdm(items):
+    #     data = {}
+    #     data["stn_data"] = stn_data
+    #     data["stn_predictor"] = stn_predictor
+    #     data["tar_nearIndex"] = tar_nearIndex
+    #     data["tar_nearWeight"] = tar_nearWeight
+    #     data["tar_predictor"] = tar_predictor
+    #     data["method"] = method
+    #     data["probflag"] = probflag
+    #     data["settings"] = settings
+    #     data["dynamic_predictors"] = dynamic_predictors
+    #     result[item] = regression_for_blocks(
+    #         item[0], item[1], item[2], item[3], data=data
+    #     )
+
+    # Parallel regression
     with Pool(
         processes=num_processes,
         initializer=init_worker,
@@ -940,12 +978,8 @@ def loop_regression_2Dor3D_multiprocessing(
             settings,
             dynamic_predictors,
             importmodules,
-            maxlimit,
         ),
     ) as pool:
-        # with Pool(processes=num_processes, initializer=init_worker, initargs=(stn_data, stn_predictor, tar_nearIndex, tar_nearWeight,
-        #                                                                      tar_predictor, method, probflag, settings,
-        #                                                                      dynamic_predictors)) as pool:
         result = pool.starmap(regression_for_blocks, items)
 
     # fill estimates to matrix
@@ -957,94 +991,6 @@ def loop_regression_2Dor3D_multiprocessing(
     t2 = time.time()
     print("Regression time cost (sec):", t2 - t1)
     return np.squeeze(estimates)
-
-
-def regression_for_a_station(
-    stn_idx,
-    ntime,
-    npred,
-    stn_data,
-    stn_predictor,
-    tar_nearIndex,
-    tar_nearWeight,
-    tar_predictor,
-    method,
-    probflag,
-    settings,
-    dynamic_predictors,
-):
-    ydata_tar = np.nan * np.zeros([ntime])
-
-    # Get the neiboring stations and their samples for the target station
-    tar_nearIndex_stn = tar_nearIndex[0][stn_idx]  # the neibouring stations indices
-    xdata_near = stn_predictor[tar_nearIndex_stn, :]  # the neibouring input features
-    ydata_near = stn_data[:, tar_nearIndex_stn]  # the neibouring output data
-    sample_weight = tar_nearWeight[0][stn_idx]  # the neiboring sample weights
-
-    # Get the target station and its samples
-    xdata_tar = tar_predictor[0][stn_idx, :]  # the target station input features
-    ydata_tar = stn_data[:, stn_idx]  # the target station output data
-
-    if method == "Linear":
-        ydata_tar = weight_linear_regression(
-            y=ydata_near.T,  # y
-            X=xdata_near,  # X
-            weights=sample_weight,  # sample_weight
-            x_test=xdata_tar,
-        )
-
-    elif method == "Logistic":
-        ydata_tar = weight_logistic_regression(
-            y=ydata_near.T,  # y
-            X=xdata_near,  # X
-            weights=sample_weight,  # sample_weight
-            x_test=xdata_tar,
-        )
-    else:
-        # TODO: implement other regression methods
-        sys.exit("Unknown regression method!")
-
-    return ydata_tar
-
-
-def loop_regression_serial(
-    stn_data,
-    stn_predictor,
-    tar_nearIndex,
-    tar_nearWeight,
-    tar_predictor,
-    method,
-    probflag,
-    settings,
-    dynamic_predictors={},
-):
-    if len(dynamic_predictors) == 0:
-        dynamic_predictors["flag"] = False
-
-    (ntime, nstn) = np.shape(stn_data)
-    nstn, npred = np.shape(stn_predictor)
-
-    items = [(i, ntime, npred) for i in range(nstn)]
-
-    # run serially
-    result = [
-        regression_for_a_station(
-            it[0],
-            it[1],
-            it[2],
-            stn_data,
-            stn_predictor,
-            tar_nearIndex,
-            tar_nearWeight,
-            tar_predictor,
-            method,
-            probflag,
-            settings,
-            dynamic_predictors,
-        )
-        for it in items
-    ]
-    return result
 
 
 ########################################################################################################################
@@ -1492,10 +1438,7 @@ def main_regression(config, target):
                 maxlimit = {"flag": False}
 
             # Get estimates via regression
-            # estimates = loop_regression_2Dor3D_multiprocessing(stn_value, stn_predictor, nearIndex, nearWeight, tar_predictor,
-            #                                                    gridcore_continuous[4:], probflag, sklearn_config[gridcore_continuous_short],
-            #                                                    predictor_dynamic, num_processes, maxlimit=maxlimit)
-            estimates = loop_regression_serial(
+            estimates = loop_regression_2Dor3D_multiprocessing(
                 stn_value,
                 stn_predictor,
                 nearIndex,
@@ -1505,6 +1448,8 @@ def main_regression(config, target):
                 probflag,
                 sklearn_config[gridcore_continuous_short],
                 predictor_dynamic,
+                num_processes,
+                maxlimit=maxlimit,
             )
 
         # else:

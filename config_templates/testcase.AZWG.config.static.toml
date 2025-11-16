@@ -64,10 +64,10 @@ dynamic_predictor_operation = []
 
 ############################## static/dynamic predictors used in regression
 # static predictors in input_stn_list or input_stn_all
-predictor_name_static_stn = ['PercSand', 'PercSilt', 'PercClay', 'elev_m', 'soc_20cm']
+predictor_name_static_stn = ['PercSand', 'PercSilt', 'PercClay', 'elev_m']
 
 # dynamic predictors in infile_grid_domain
-predictor_name_static_grid = ['PercSand', 'PercSilt', 'PercClay', 'elev_m', 'soc_20cm']
+predictor_name_static_grid = ['PercSand', 'PercSilt', 'PercClay', 'elev_m']
 
 ########################################################################################################################
 # settings for probabilistic estimation

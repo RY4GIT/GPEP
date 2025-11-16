@@ -1,7 +1,7 @@
 ### routines to generate ensembles (probabilistic estimation) from regression outputs
 
 # load libraries
-import os, sys, time, numbers
+import os, sys, time
 import xarray as xr
 import numpy as np
 from scipy import special
@@ -10,7 +10,7 @@ from multiprocessing import Pool
 from data_processing import data_transformation
 import random_field_FortranGMET as rf_FGMET
 from data_processing import data_transformation, calculate_monthly_cdfs
-# from xarray import random_field as rnd_prev
+
 # ====== subroutines/ functions ======
 
 
@@ -646,9 +646,10 @@ def generate_prob_estimates_serial(config, member_range=[]):
 
                 # Initialize an empty list to store results for each time step
                 ens_estimate = np.nan * np.zeros([nrow, ncol, ntime], dtype=np.float32)
-                masknan = np.isnan(allvar_reg_estimate[var_name][:, :, 0])
+                # masknan = np.isnan(allvar_reg_estimate[var_name]) # This shape is (nsta, ntime), and not (nrow, ncol, ntime)...
 
-                # Loop through each time step
+                # Loop through each time ste
+                rnd_prev = None  # first time step
                 for i in range(ntime):
                     print(f"Generating time step {i}-{ntime} for {var_name}")
 
@@ -662,6 +663,7 @@ def generate_prob_estimates_serial(config, member_range=[]):
                         jorder[var_name],
                         seeds_rf[var_name][ens, i],
                     )
+
                     if i == 0:
                         rnd_now = rndi
                     else:
@@ -673,11 +675,12 @@ def generate_prob_estimates_serial(config, member_range=[]):
                     rnd_prev = rnd_now.copy()
 
                     # Mask random field where estimates are NaN
-                    rnd_now[masknan] = np.nan
+                    # rnd_now[masknan] = np.nan
 
                     # Generate probabilistic estimates for the current time step
 
                     d1 = allvar_reg_estimate[var_name][:, :, i]
+                    # This shape is (nsta, ntime), and should be (nrow, ncol, ntime)...
                     d2 = allvar_reg_error[var_name][:, :, i]
                     if len(nearby_stn_max[var_name]) > 0:
                         d3 = nearby_stn_max[var_name][:, :, i]
