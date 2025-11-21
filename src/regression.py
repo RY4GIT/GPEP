@@ -215,7 +215,8 @@ def regrid_xarray(ds, tarlon=None, tarlat=None, target=None, interp_like=None):
         else:
             method = "linear"
 
-        ds_out = ds.interp_like(interp_like, method=method)
+        interp_like_latlon = interp_like.rename({"x": "lon", "y": "lat"})
+        ds_out = ds.interp_like(interp_like_latlon, method=method)
 
     return ds_out
 
@@ -368,73 +369,67 @@ def regression_for_a_chunk(r1, r2, c1, c2, data=None):
 
                 # interpolation for every time step
                 for t in range(ntime):
+                    #########################################################
+                    # PREPARE PREDICTOR MATRIX
+                    #########################################################
+
+                    # Get station data
                     ydata_near = np.squeeze(stn_data[t, sample_nearIndex])
-                    if len(np.unique(ydata_near)) == 1:  # e.g., for prcp, all zero
-                        ydata_tar[r - r1, c - c1, t] = ydata_near[0]
-                    else:
-                        # add dynamic predictors if flag is true and predictors are good
-                        xdata_near = xdata_near0
-                        xdata_g = xdata_g0
 
-                        if dynamic_predictors["flag"] == True:
-                            xdata_near_add = dynamic_predictors[
-                                "stn_predictor_dynamic"
-                            ][
-                                :, t, sample_nearIndex, sample_nearIndex
-                            ].T  # (1, time, lat_stn, lon_stn)
-                            xdata_g_add = dynamic_predictors["tar_predictor_dynamic"][
-                                :, t, r, c
-                            ]  # (1, time, lat_grid, lon_grid)
-                            if np.all(~np.isnan(xdata_near_add)) and np.all(
-                                ~np.isnan(xdata_g_add)
-                            ):
-                                # whether use a dynamic predictor
-                                diff = np.max(xdata_near_add, axis=0) - np.min(
-                                    xdata_near_add, axis=0
-                                )
-                                tolerance = 1e-10
+                    # Get static predictors
+                    xdata_near = xdata_near0
+                    xdata_g = xdata_g0
 
-                                xdata_near_add = xdata_near_add[:, diff > tolerance]
-                                xdata_g_add = xdata_g_add[diff > tolerance]
+                    # Get dynamic predictors
+                    if dynamic_predictors["flag"]:
+                        # Station-based dynamic predictors
+                        xdata_near_add = dynamic_predictors["stn_predictor_dynamic"][
+                            :, t, sample_nearIndex, sample_nearIndex
+                        ].T  # (1, time, lat_stn, lon_stn)
 
-                                if xdata_near_add.size > 0:
-                                    xdata_near_try = np.hstack(
-                                        (xdata_near, xdata_near_add)
-                                    )
-                                    xdata_g_try = np.hstack((xdata_g, xdata_g_add))
+                        # Grid-based dynamic predictors
+                        xdata_g_add = dynamic_predictors["tar_predictor_dynamic"][
+                            :, t, r, c
+                        ]  # (1, time, lat_grid, lon_grid)
 
-                                    # The below codes using check_predictor_matrix_behavior are not necessary
-                                    xdata_near = xdata_near_try
-                                    xdata_g = xdata_g_try
-
-                        # Main regression part
-                        if method == "Linear":
-                            ydata_tar[r - r1, c - c1, t] = weight_linear_regression(
-                                y=ydata_near,
-                                X=xdata_near,
-                                weights=sample_weight,
-                                x_test=xdata_g,
+                        # Check if the dynamic predictors are valid
+                        if np.all(~np.isnan(xdata_near_add)) and np.all(
+                            ~np.isnan(xdata_g_add)
+                        ):
+                            # Whether use a dynamic predictor (if it is static, diff will be close to 0, and we don't need to use it)
+                            diff = np.max(xdata_near_add, axis=0) - np.min(
+                                xdata_near_add, axis=0
                             )
-                        # elif method == "Logistic":
-                        #     ydata_tar[r - r1, c - c1, t] = weight_logistic_regression(
-                        #         xdata_near, sample_weight, ydata_near, xdata_g
-                        #     )
-                        # else:
-                        # Machine learing methods
-                        #     ydata_tar[r - r1, c - c1, t] = train_and_return_test(
-                        #         xdata_near,
-                        #         ydata_near,
-                        #         xdata_g,
-                        #         method,
-                        #         probflag,
-                        #         settings,
-                        #         sample_weight,
-                        #     )
-                        else:
-                            sys.exit(f"Unknonwn regression method: {method}")
-                        # End of main regression part
+                            tolerance = 1e-10
 
-                        # apply max limit (not implemented yet)
+                            # Remove stationary dynamic predictors
+                            xdata_near_add = xdata_near_add[:, diff > tolerance]
+                            xdata_g_add = xdata_g_add[diff > tolerance]
+
+                            # Add dynamic predictors
+                            if xdata_near_add.size > 0:
+                                # If the dynamic predictors are valid, add them to the predictor matrix
+                                xdata_near = np.hstack((xdata_near, xdata_near_add))
+                                xdata_g = np.hstack((xdata_g, xdata_g_add))
+                            else:
+                                # The dynamic predictiors are not available, so not get added to the predictor matrix
+                                print(
+                                    f"No valid dynamic predictors at r={r}, c={c}, t={t}"
+                                )
+
+                    #########################################################
+                    # MAIN REGRESSION PART
+                    #########################################################
+
+                    if method == "Linear":
+                        ydata_tar[r - r1, c - c1, t] = weight_linear_regression(
+                            y=ydata_near,
+                            X=xdata_near,
+                            weights=sample_weight,
+                            x_test=xdata_g,
+                        )
+                    else:
+                        sys.exit(f"Unknonwn regression method: {method}")
 
     return ydata_tar
 
@@ -455,9 +450,11 @@ def loop_regression(
 ):
     t1 = time.time()
 
+    # Initialize dynamic predictor flags
     if len(dynamic_predictors) == 0:
         dynamic_predictors["flag"] = False
 
+    # Get the dimensions
     (ntime, nstn) = np.shape(stn_data)
     nrow, ncol, nearmax = np.shape(tar_nearIndex)
 
@@ -467,41 +464,43 @@ def loop_regression(
     else:
         chunks = [(0, nrow, c, c + 1) for c in range(ncol)]
 
-    # # Serial regression
-    # result = #fix dimension
-    # for item in tqdm(items):
-    #     data = {}
-    #     data["stn_data"] = stn_data
-    #     data["stn_predictor"] = stn_predictor
-    #     data["tar_nearIndex"] = tar_nearIndex
-    #     data["tar_nearWeight"] = tar_nearWeight
-    #     data["tar_predictor"] = tar_predictor
-    #     data["method"] = method
-    #     data["probflag"] = probflag
-    #     data["settings"] = settings
-    #     data["dynamic_predictors"] = dynamic_predictors
-    #     result[item] = regression_for_a_chunk(
-    #         item[0], item[1], item[2], item[3], data=data
-    #     )
+    # Serial regression
+    result = []
+    for chunk in tqdm(chunks):
+        data = {}
+        data["stn_data"] = stn_data
+        data["stn_predictor"] = stn_predictor
+        data["tar_nearIndex"] = tar_nearIndex
+        data["tar_nearWeight"] = tar_nearWeight
+        data["tar_predictor"] = tar_predictor
+        data["method"] = method
+        data["probflag"] = probflag
+        data["settings"] = settings
+        data["dynamic_predictors"] = dynamic_predictors
+        result.append(
+            regression_for_a_chunk(
+                chunk[0], chunk[1], chunk[2], chunk[3], data=data
+            )  # [row_start, row_end, col_start, col_end]
+        )
 
-    # Parallel regression
-    with Pool(
-        processes=num_processes,
-        initializer=init_worker,
-        initargs=(
-            stn_data,
-            stn_predictor,
-            tar_nearIndex,
-            tar_nearWeight,
-            tar_predictor,
-            method,
-            probflag,
-            settings,
-            dynamic_predictors,
-            importmodules,
-        ),
-    ) as pool:
-        result = pool.starmap(regression_for_a_chunk, chunks)
+    # # Parallel regression
+    # with Pool(
+    #     processes=num_processes,
+    #     initializer=init_worker,
+    #     initargs=(
+    #         stn_data,
+    #         stn_predictor,
+    #         tar_nearIndex,
+    #         tar_nearWeight,
+    #         tar_predictor,
+    #         method,
+    #         probflag,
+    #         settings,
+    #         dynamic_predictors,
+    #         importmodules,
+    #     ),
+    # ) as pool:
+    #     result = pool.starmap(regression_for_a_chunk, chunks)
 
     # fill estimates to matrix
     estimates = np.nan * np.zeros([nrow, ncol, ntime], dtype=np.float32)
@@ -516,9 +515,13 @@ def loop_regression(
 ########################################################################################################################
 
 
+class Conf:
+    def __init__(self, d):
+        self.__dict__ = d
+
+
 def main_regression(config, target):
     """Main function for regression"""
-
     ########################################################################################################################
     # PREPARATION
     ########################################################################################################################
@@ -574,7 +577,7 @@ def main_regression(config, target):
     file_allstn = config["file_allstn"]
     file_stn_nearinfo = config["file_stn_nearinfo"]
     file_stn_weight = config["file_stn_weight"]
-    file_infile_grid_domain = config["infile_grid_domain"]
+    infile_grid_domain = config["infile_grid_domain"]
     outfile = outfile  # just to make sure all in/out settings are in this section
 
     target_vars = config["target_vars"]
@@ -810,7 +813,7 @@ def main_regression(config, target):
         # Dynamic predictors for grids
         if target == "grid":
             # Get static predictor domain
-            ds_domain = xr.open_dataset(file_infile_grid_domain)
+            ds_domain = xr.open_dataset(infile_grid_domain)
 
             # Interpolate dynamic predictors to grid points
             ds_dynamic_tar = regrid_xarray(

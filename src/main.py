@@ -43,7 +43,6 @@ if __name__ == "__main__":
     config = regression.main_regression(config, "cval")
 
     # (2) estimate regression coefficients at all grid points
-    # (?): Takes nearest grid index at nearIndex = ds_nearinfo[vtmp].values, so it is not all grid points?
     config = regression.main_regression(config, "grid")
 
     ########################################################################################################################
