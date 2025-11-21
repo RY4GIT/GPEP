@@ -17,7 +17,7 @@ if __name__ == "__main__":
 
     # config_file = sys.argv[1]
     config_file = (
-        r"C:\Users\flipl\dev\GPEP\config_templates\testcase.AZWG.config.static.toml"
+        r"C:\Users\flipl\dev\GPEP\config_templates\testcase.AZWG.config.dynamic.toml"
     )
 
     ########################################################################################################################
