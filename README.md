@@ -1,4 +1,8 @@
-# GPEP  
+# GPEP-theta
+
+This code is modified from original GPEP code:
+- Functions not used in this experiment is removed for readability (e.g., probablistic variables treatment, unused regression functions)
+- `data_processing.py` is adjusted to my specific input file type
 
 [![DOI](https://zenodo.org/badge/674783032.svg)](https://zenodo.org/badge/latestdoi/674783032)  
 
