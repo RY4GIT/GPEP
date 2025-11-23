@@ -5,7 +5,7 @@
 ########################################################################################################################
 
 # case name
-case_name = 'AZWGstatic'
+case_name = 'AZWGdynamic'
 
 # worker number (cpu cores)
 num_processes = 5
@@ -31,8 +31,8 @@ outpath_parent = "G:/Shared drives/Ryoko and Hilary/q-field/out/gpep/AZWG"
 
 ############################## target variables and periods
 # target period
-date_start = "2018-01-01"
-date_end = "2018-01-02"
+date_start = "2017-08-10"
+date_end = "2017-09-02"
 
 # input/output variables
 input_vars = ['sm'] # variables in the raw station files
@@ -49,18 +49,6 @@ mapping_InOut_var = []
 minRange_vars = [0]
 maxRange_vars = [1.0]
 
-############################## dynamic predictors for regression
-# only useful when dynamic_predictor_filelist is valid
-
-# file list containing dynamic predictor inputs (optional). Give it a nonsense string (e.g., "NA") can turn off dynamic predictors
-dynamic_predictor_filelist = "NA"
-
-# dynamic predictors for each target_vars. Empty list means no dynamic predictors
-dynamic_predictor_name = []
-
-# dynamic predictors may needs some processing. two keywords: "interp" an "transform"
-# Example "cube_root_prec_rate:interp=linear:transform=boxcox"
-dynamic_predictor_operation = []
 
 ############################## static/dynamic predictors used in regression
 # static predictors in input_stn_list or input_stn_all
@@ -84,6 +72,7 @@ ensemble_end = 5
 linkvar = []
 
 # variable correlations. They are all optional
+# TODO: check later
 clen = [150] 
 # corresponding to target_vars
 lag1_auto_cc = [-9999] 

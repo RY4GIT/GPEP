@@ -7,7 +7,7 @@ import xarray as xr
 import sys, os, time
 from tqdm import tqdm
 from weight_calculation import distanceweight
-from data_processing import data_transformation
+# from data_processing import data_transformation
 
 
 def weighted_mean(data, weight):
@@ -149,7 +149,7 @@ def extrapolate_auxiliary_info(config):
         overwrite_stn_cv_reg = False
 
     print("#" * 50)
-    print(f"Station interpolation of CV errors")
+    print("Station interpolation of CV errors")
     print("#" * 50)
     print("Input file_cval_reg:       ", file_cval_reg)
     print("Input file_stn_nearinfo:   ", file_stn_nearinfo)
@@ -159,8 +159,8 @@ def extrapolate_auxiliary_info(config):
 
     if os.path.isfile(file_grid_auxiliary):
         print("Note! Output gridded error file exists")
-        if overwrite_stn_cv_reg == True:
-            print("overwrite_stn_cv_reg is True. Continue.")
+        if overwrite_stn_cv_reg:
+            print("overwrite_stn_cv_reg is True. Overwrite it.")
         else:
             print("overwrite_stn_cv_reg is False. Skip regression.\n")
             return config
@@ -207,15 +207,15 @@ def extrapolate_auxiliary_info(config):
                     print(
                         f"Apply transformation to get {var_name_trans} from {var_name}"
                     )
-                    if transform_vars[vn] == "ecdf":
-                        print("ecdf is not fully supported here yet")
-                    else:
-                        loo_value = data_transformation(
-                            ds_cval[var_name].values,
-                            transform_vars[vn],
-                            transform_settings[transform_vars[vn]],
-                            "transform",
-                        )
+                    # if transform_vars[vn] == "ecdf":
+                    #     print("ecdf is not fully supported here yet")
+                    # else:
+                    #     loo_value = data_transformation(
+                    #         ds_cval[var_name].values,
+                    #         transform_vars[vn],
+                    #         transform_settings[transform_vars[vn]],
+                    #         "transform",
+                    #     )
 
                 else:
                     sys.exit(f"Cannot find {var_name_trans} in {file_cval_reg}")
@@ -234,15 +234,15 @@ def extrapolate_auxiliary_info(config):
                     print(
                         f"Apply transformation to get {var_name_trans} from {var_name}"
                     )
-                    if transform_vars[vn] == "ecdf":
-                        print("ecdf is not fully supported here yet")
-                    else:
-                        stn_value = data_transformation(
-                            ds_stn[var_name].values,
-                            transform_vars[vn],
-                            transform_settings[transform_vars[vn]],
-                            "transform",
-                        )
+                    # if transform_vars[vn] == "ecdf":
+                    #     print("ecdf is not fully supported here yet")
+                    # else:
+                    #     stn_value = data_transformation(
+                    #         ds_stn[var_name].values,
+                    #         transform_vars[vn],
+                    #         transform_settings[transform_vars[vn]],
+                    #         "transform",
+                    #     )
             else:
                 stn_value = ds_stn[var_name].values
 

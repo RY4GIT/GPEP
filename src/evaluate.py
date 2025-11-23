@@ -14,6 +14,7 @@ def evaluate_allpoint(obs, est, threshold=0.1):
 
 def evaluate(obs, est, threshold=0.1):
     # threshold: used for probability evaluation
+    # TODO: check hangling of the nan values for 	POD	FOH	FAR	CSI	HSS
 
     obs, est = data_preprocess(obs, est)
 

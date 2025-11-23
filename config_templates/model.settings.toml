@@ -73,7 +73,7 @@ output_randomfield = false
 append_date_to_output_filename = true
 
 # print configuration information
-print_config = false
+print_config = true
 
 # overwrite existing files
 
@@ -83,10 +83,20 @@ overwrite_stninfo = true
 overwrite_merged_stnfile = true
 
 # When you run a new model
-overwrite_station_cc = false
+overwrite_station_cc = true
 overwrite_weight = true
 overwrite_cv_reg = true
 overwrite_grid_reg = true
-overwrite_spcorr = false
 overwrite_ens = true
 
+# This spatial correlation file takes time 
+overwrite_spcorr = false
+
+
+# **overwrite_stninfo**: Files related integrated station inputs and nearby information
+# **overwrite_station_cc**: For the station space-time correlation file  
+# **overwrite_weight**: For station weight file  
+# **overwrite_cv_reg**: For station-based cross validation file  
+# **overwrite_grid_reg**: For gridded regression file  
+# **overwrite_ens**: For ensemble output files  
+# **overwrite_spcorr**: For spatial correlation structure files  
