@@ -73,14 +73,14 @@ output_randomfield = false
 append_date_to_output_filename = true
 
 # print configuration information
-print_config = true
+print_config = false
 
 # overwrite existing files
 
 # When you change the input data / add variables change these.
 # When you change resolution, make it all true
-overwrite_stninfo = true 
-overwrite_merged_stnfile = true
+overwrite_stninfo = false 
+overwrite_merged_stnfile = false
 
 # When you run a new model
 overwrite_station_cc = true

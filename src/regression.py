@@ -197,6 +197,7 @@ def regrid_xarray(ds, tarlon=None, tarlat=None, target=None, interp_like=None):
     # if target='2D', tarlon and tarlat are vector defining grids
 
     if target == "1D":
+        """Sample dynamic predictor at station points (interp)"""
         if (len(tarlat) < len(ds.lat)) and (len(tarlon) < len(ds.lon)):
             # If the target grid is coarser than the source grid, use nearest neighbor interpolation
             method = "nearest"
@@ -211,6 +212,7 @@ def regrid_xarray(ds, tarlon=None, tarlat=None, target=None, interp_like=None):
         )
 
     elif target == "2D":
+        """Regrid dynamic predictor to target grids (interp_like)"""
         if (len(interp_like.x) < len(ds.lat)) and (len(interp_like.y) < len(ds.lon)):
             method = "nearest"
         else:
@@ -391,7 +393,7 @@ def regression_for_a_chunk(r1, r2, c1, c2, data=None):
                         # Grid-based dynamic predictors
                         xdata_g_add = dynamic_predictors["tar_predictor_dynamic"][
                             :, t, r, c
-                        ]  # (1, time, lat_grid, lon_grid)
+                        ]  # (nvars, time, lat_grid, lon_grid)
 
                         # Check if the dynamic predictors are valid
                         if np.all(~np.isnan(xdata_near_add)) and np.all(
@@ -845,21 +847,21 @@ def main_regression(config, target):
                 f"{var_name_trans} instead of {var_name} will be loaded from the station data file {file_allstn}."
             )
 
-            # adjust max/min limits
-            if minRange_vars[vn] != -np.inf:
-                minRange_vars[vn] = data_transformation(
-                    minRange_vars[vn],
-                    transform_vars[vn],
-                    transform_settings[transform_vars[vn]],
-                    "transform",
-                )
-            if maxRange_vars[vn] != np.inf:
-                maxRange_vars[vn] = data_transformation(
-                    maxRange_vars[vn],
-                    transform_vars[vn],
-                    transform_settings[transform_vars[vn]],
-                    "transform",
-                )
+            # # adjust max/min limits
+            # if minRange_vars[vn] != -np.inf:
+            #     minRange_vars[vn] = data_transformation(
+            #         minRange_vars[vn],
+            #         transform_vars[vn],
+            #         transform_settings[transform_vars[vn]],
+            #         "transform",
+            #     )
+            # if maxRange_vars[vn] != np.inf:
+            #     maxRange_vars[vn] = data_transformation(
+            #         maxRange_vars[vn],
+            #         transform_vars[vn],
+            #         transform_settings[transform_vars[vn]],
+            #         "transform",
+            #     )
 
         else:
             var_name_trans = ""
@@ -941,7 +943,7 @@ def main_regression(config, target):
         predictor_dynamic = {}
         predictor_dynamic["flag"] = dynamic_flag
 
-        if dynamic_flag == True:
+        if dynamic_flag:
             # stn_predictor_dynamic dim: [n_feature, n_time, n_station]
             # tar_predictor_dynamic dim: [n_feature, n_time, n_station] or [n_feature, n_time, n_row, n_col]
             predictor_dynamic["stn_predictor_dynamic"] = np.stack(
@@ -951,8 +953,9 @@ def main_regression(config, target):
                 [ds_dynamic_tar[v].values for v in dynamic_predictor_name[vn]], axis=0
             )
 
-            if target == "cval":
-                # change raw dim: [n_feature, n_time, n_station] to [n_feature, n_time, 1, n_station]
+            # if target == "cval":
+            # If there is only one dynamic predictor, change raw dim: [n_feature, n_time, n_station] to [n_feature, n_time, 1, n_station]
+            if len(dynamic_predictor_name[vn]) == 1:
                 predictor_dynamic["tar_predictor_dynamic"] = predictor_dynamic[
                     "tar_predictor_dynamic"
                 ][:, :, np.newaxis, :]

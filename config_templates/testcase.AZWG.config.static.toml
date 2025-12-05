@@ -5,7 +5,7 @@
 ########################################################################################################################
 
 # case name
-case_name = 'AZWGdynamic'
+case_name = 'AZWGstatic'
 
 # worker number (cpu cores)
 num_processes = 5
@@ -20,7 +20,7 @@ modelsettings_file = "model.settings.toml"
 ############################## input/output files
 
 # the input station file list (with attributes) and input station path
-input_stn_list = "G:/Shared drives/Ryoko and Hilary/q-field/data/USDA_ARS/AZWG/preprocessed/site_metadata_gpep.csv"
+input_stn_list = "G:/Shared drives/Ryoko and Hilary/q-field/data/stac_data/AZWG/gpep_site_metadata.csv"
 input_stn_path = "G:/Shared drives/Ryoko and Hilary/q-field/data/USDA_ARS/AZWG/preprocessed"
 
 # domain gridded static attributes (e.g., dem, lon, lat, slope)
@@ -52,10 +52,10 @@ maxRange_vars = [1.0]
 
 ############################## static/dynamic predictors used in regression
 # static predictors in input_stn_list or input_stn_all
-predictor_name_static_stn = ['PercSand', 'PercSilt', 'PercClay', 'elev_m']
+predictor_name_static_stn = ['PercSand', 'PercSilt', 'PercClay', 'elev_m','northness', 'eastness', 'slope_m', 'slope_n', 'slope_e', 'twi']
 
 # dynamic predictors in infile_grid_domain
-predictor_name_static_grid = ['PercSand', 'PercSilt', 'PercClay', 'elev_m']
+predictor_name_static_grid = ['PercSand', 'PercSilt', 'PercClay', 'elev_m','northness', 'eastness', 'slope_m', 'slope_n', 'slope_e', 'twi']
 
 ########################################################################################################################
 # settings for probabilistic estimation
