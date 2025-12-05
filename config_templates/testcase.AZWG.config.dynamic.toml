@@ -46,7 +46,7 @@ probability_thresholds = []
 mapping_InOut_var = []
 
 # min/max limit or transformation
-minRange_vars = [0]
+minRange_vars = [0.0]
 maxRange_vars = [1.0]
 
 ############################## dynamic predictors for regression
