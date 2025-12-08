@@ -76,6 +76,7 @@ def merge_stndata_into_single_file(config):
         input_stn_all = ""
 
     file_allstn = config["file_allstn"]
+    sensor_depth_cm = config["sensor_depth_cm"]
     input_vars = config["input_vars"]
     target_vars = config["target_vars"]
     predictor_name_static_stn = config["predictor_name_static_stn"]
@@ -143,7 +144,7 @@ def merge_stndata_into_single_file(config):
             print("overwrite_merged_stnfile is False. Skip station merging.\n")
             return config
 
-    # load station data
+    # load station data ########################################################################################################################
     if "input_stn_all" in config and os.path.isfile(input_stn_all):
         print("input_stn_all exists:    ", input_stn_all)
         print("reading station info from", input_stn_all, "instead of individual files")
@@ -161,13 +162,16 @@ def merge_stndata_into_single_file(config):
             "A merged station data file does not exist: reading station information from individual files"
         )
 
+        ########################################################################################################################
+        # Read station information from the list file
         df_stn = pd.read_csv(input_stn_list)
         df_stn["mask"] = 1.0
 
+        ########################################################################################################################
         # Read all station data files into a list of dataframes
         all_dfs = []
         for i, stnid in enumerate(df_stn.stnid):
-            infilei = f"{input_stn_path}/sm_{stnid}_depth05cm.csv"  # TODO: make the depth values be flexible
+            infilei = f"{input_stn_path}/sm_{stnid}_depth{sensor_depth_cm:02d}cm.csv"
             if not os.path.isfile(infilei):
                 print(f"{infilei} does not exist. Skip {stnid}.")
                 continue
@@ -183,6 +187,7 @@ def merge_stndata_into_single_file(config):
 
         _all_dfs_concat = pd.concat(all_dfs, axis=1)
 
+        ########################################################################################################################
         # Resample the data to the desired frequency
         # TODO: make the frequency flexible
         all_dfs_concat = _all_dfs_concat.resample("D").mean()
@@ -198,6 +203,7 @@ def merge_stndata_into_single_file(config):
         for var in input_vars:
             ds_stn[var] = xr.DataArray(all_dfs_concat.values, dims=("time", "stn"))
 
+    ########################################################################################################################
     # constrain variables
     for i in range(len(target_vars)):
         vari = target_vars[i]
@@ -214,6 +220,77 @@ def merge_stndata_into_single_file(config):
                 )
                 v[v > maxRange_vars[i]] = maxRange_vars[i]
             ds_stn[vari].values = v
+
+    ########################################################################################################################
+    # Check the combination of available station data per each timestep for each target variable
+    for vari in target_vars:
+        # Check station data availability per each timestep
+        available_array = ~ds_stn[vari].isnull()
+        ds_stn[vari + "_avail"] = available_array
+
+        # Get the list of available station data per each timestep
+        available_stn_list = np.empty(available_array.shape[0], dtype=object)
+        for t in range(available_array.shape[0]):
+            available_stn = ds_stn.stn.values[available_array[t]]
+            available_stn_list[t] = available_stn
+
+        # Get the unique combinations of available station data
+        ds_stn[vari + "_avail_stn"] = xr.DataArray(available_stn_list, dims=("time",))
+
+        # Convert to a list of tuples for comparison
+        available_stn_list_tuples = [
+            tuple(arr) for arr in ds_stn[vari + "_avail_stn"].values
+        ]
+        available_stn_unique = list(set(available_stn_list_tuples))
+        available_stn_unique_dict = {
+            i: combo for i, combo in enumerate(available_stn_unique)
+        }
+
+        print(
+            "Unique combinations of available station data found for",
+            vari,
+            ":",
+            len(available_stn_unique_dict),
+        )
+
+        # Assgin the unique combinations an index, which will be used for the weight calculation
+        ds_stn[vari + "_avail_stn_idx"] = xr.DataArray(
+            np.arange(len(available_stn_unique)), dims=("avail_stn_idx",)
+        )
+
+        # Assign the index to the available stations for each timestep
+        avail_stn_index_values = np.empty(available_array.shape[0], dtype=int)
+        for t in range(available_array.shape[0]):
+            available_stn = tuple(ds_stn.stn.values[available_array[t]])
+
+            # Find the index by searching through the dictionary values
+            found = False
+            for idx, combo in available_stn_unique_dict.items():
+                if combo == available_stn:
+                    avail_stn_index_values[t] = idx
+                    found = True
+                    break
+            if not found:
+                print(
+                    f"Warning: No index found for available stations {available_stn} at time {t}"
+                )
+                avail_stn_index_values[t] = -1
+
+        ds_stn[vari + "_avail_stn_idx_values"] = xr.DataArray(
+            avail_stn_index_values, dims=("time",)
+        )
+
+        # Save the unique combinations to a csv file
+        available_stn_unique_df = pd.DataFrame(
+            available_stn_unique_dict.items(), columns=["avail_stn_index", "avail_stn"]
+        )
+        available_stn_unique_df.to_csv(
+            f"{outpath_parent}/stn_info/available_stn_unique_{vari}.csv", index=False
+        )
+
+    # Remove a few variables that are not needed
+    for var in target_vars:
+        ds_stn = ds_stn.drop_vars([var + "_avail_stn"])
 
     # # transform variables
     # print("Transform variables if relevant settings are provided")
@@ -249,12 +326,13 @@ def merge_stndata_into_single_file(config):
     #     else:
     #         print(f"Do not perform transformation for {target_vars[i]}")
 
-    # save to output files
+    ########################################################################################################################
+    # Save to output files
     encoding = {}
     for var in ds_stn.data_vars:
         encoding[var] = {"zlib": True, "complevel": 4}
 
-    ds_stn.to_netcdf(file_allstn)
+    ds_stn.to_netcdf(file_allstn, encoding=encoding)
 
     t2 = time.time()
     print("Time cost (s) for merging station data file:", t2 - t1, "\n")

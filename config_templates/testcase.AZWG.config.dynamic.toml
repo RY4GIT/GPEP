@@ -34,6 +34,9 @@ outpath_parent = "G:/Shared drives/Ryoko and Hilary/q-field/out/gpep/AZWG"
 date_start = "2017-08-10"
 date_end = "2017-09-02"
 
+# soil moisture sensor depth
+sensor_depth_cm = 5
+
 # input/output variables
 input_vars = ['sm'] # variables in the raw station files
 target_vars = ['sm'] # target output variables
