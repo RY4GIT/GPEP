@@ -275,6 +275,13 @@ def find_nearstn_for_InStn(
 
 
 def get_near_station_info(config):
+    """
+    This is the main function of this module.
+
+    This module is used to get the near station information for each station/grid.
+
+    """
+
     t1 = time.time()
 
     # parse and change configurations

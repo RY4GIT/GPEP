@@ -45,8 +45,14 @@ from scipy.interpolate import interp1d
 
 
 def merge_stndata_into_single_file(config):
-    # GMET v2.0 assumes that each station has an independent file. GPEP will merge the station data into one file,
-    #   which can speed up i/o in subsequent runs of GPEP using the same dataset.
+    """
+    This is the main function of this module.
+
+    GMET v2.0 assumes that each station has an independent file. GPEP will merge the station data into one file,
+    which can speed up i/o in subsequent runs of GPEP using the same dataset.
+
+    """
+
     t1 = time.time()
 
     ########################################################################################################################
