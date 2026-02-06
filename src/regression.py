@@ -27,11 +27,19 @@ from tqdm import tqdm
 # from sklearn.neural_network import MLPRegressor, MLPClassifier
 
 
-def weight_linear_regression(y, X, weights=None, x_test=None):
-    """https://www.statsmodels.org/stable/examples/notebooks/generated/wls.html"""
+def weight_linear_regression(y, x, weights=None, x_test=None):
+    """
+    https://www.statsmodels.org/stable/examples/notebooks/generated/wls.html
+    https://www.statsmodels.org/dev/generated/statsmodels.regression.linear_model.WLS.html
+    """
+    # X = sm.add_constant(x) # Looks like already has constant? From where?
+    # X_test = sm.add_constant(x_test)
+    X = x
+    X_test = x_test
+
     model = sm.WLS(y, X, weights=weights, missing="drop").fit(disp=0)
-    y_pred = model.predict(x_test)
-    return y_pred
+    y_pred = model.predict(X_test)
+    return y_pred, model
 
 
 ########################################################################################################################
@@ -348,7 +356,19 @@ def regression_for_a_chunk(r1, r2, c1, c2, data=None):
         dynamic_predictors = data["dynamic_predictors"]
 
     (ntime, nstn) = np.shape(stn_data)
+    npredictor = (
+        np.shape(stn_predictor)[1]
+        + np.shape(dynamic_predictors["stn_predictor_dynamic"])[0]
+    )
+
     ydata_tar = np.nan * np.zeros([r2 - r1, c2 - c1, ntime])
+    model_stats = {
+        "r_squared": np.nan * np.zeros([r2 - r1, c2 - c1, ntime, npredictor]),
+        "p_value": np.nan * np.zeros([r2 - r1, c2 - c1, ntime, npredictor]),
+        "std_error": np.nan * np.zeros([r2 - r1, c2 - c1, ntime, npredictor]),
+        "t_value": np.nan * np.zeros([r2 - r1, c2 - c1, ntime, npredictor]),
+        "coefficients": np.nan * np.zeros([r2 - r1, c2 - c1, ntime, npredictor]),
+    }
 
     # Loop through each grid cell in the chunk
     for r in range(r1, r2):
@@ -425,16 +445,25 @@ def regression_for_a_chunk(r1, r2, c1, c2, data=None):
                     #########################################################
 
                     if method == "Linear":
-                        ydata_tar[r - r1, c - c1, t] = weight_linear_regression(
+                        ydata_tar[r - r1, c - c1, t], model = weight_linear_regression(
                             y=ydata_near,
-                            X=xdata_near,
+                            x=xdata_near,
                             weights=sample_weight,
                             x_test=xdata_g,
                         )
+
+                        model_stats["r_squared"][r - r1, c - c1, t, :] = model.rsquared
+                        model_stats["p_value"][r - r1, c - c1, t, :] = model.pvalues
+                        model_stats["std_error"][r - r1, c - c1, t, :] = (
+                            model.bse
+                        )  # standard error of the beta coefficients
+                        model_stats["t_value"][r - r1, c - c1, t, :] = model.tvalues
+                        model_stats["coefficients"][r - r1, c - c1, t, :] = model.params
+
                     else:
                         sys.exit(f"Unknonwn regression method: {method}")
 
-    return ydata_tar
+    return ydata_tar, model_stats
 
 
 def loop_regression(
@@ -468,7 +497,8 @@ def loop_regression(
         chunks = [(0, nrow, c, c + 1) for c in range(ncol)]
 
     # Serial regression
-    result = []
+    y_estimates = []
+    model_stats = []
     for chunk in tqdm(chunks):
         data = {}
         data["stn_data"] = stn_data
@@ -480,11 +510,12 @@ def loop_regression(
         data["probflag"] = probflag
         data["settings"] = settings
         data["dynamic_predictors"] = dynamic_predictors
-        result.append(
-            regression_for_a_chunk(
-                chunk[0], chunk[1], chunk[2], chunk[3], data=data
-            )  # [row_start, row_end, col_start, col_end]
+
+        y_estimate, model_stats_chunk = regression_for_a_chunk(
+            chunk[0], chunk[1], chunk[2], chunk[3], data=data
         )
+        y_estimates.append(y_estimate)
+        model_stats.append(model_stats_chunk)
 
     # # Parallel regression
     # with Pool(
@@ -503,16 +534,43 @@ def loop_regression(
     #         importmodules,
     #     ),
     # ) as pool:
-    #     result = pool.starmap(regression_for_a_chunk, chunks)
+    #     y_estimates, model_stats = pool.starmap(regression_for_a_chunk, chunks)
 
     # fill estimates to matrix
     estimates = np.nan * np.zeros([nrow, ncol, ntime], dtype=np.float32)
+    npredictor = (
+        np.shape(stn_predictor)[1]
+        + np.shape(dynamic_predictors["stn_predictor_dynamic"])[0]
+    )
+    stats = dict(
+        r_squared=np.nan * np.zeros([nrow, ncol, ntime, npredictor], dtype=np.float32),
+        p_value=np.nan * np.zeros([nrow, ncol, ntime, npredictor], dtype=np.float32),
+        std_error=np.nan * np.zeros([nrow, ncol, ntime, npredictor], dtype=np.float32),
+        t_value=np.nan * np.zeros([nrow, ncol, ntime, npredictor], dtype=np.float32),
+        coefficients=np.nan
+        * np.zeros([nrow, ncol, ntime, npredictor], dtype=np.float32),
+    )
     for i, chunk in enumerate(chunks):
-        estimates[chunk[0] : chunk[1], chunk[2] : chunk[3], :] = result[i]
+        estimates[chunk[0] : chunk[1], chunk[2] : chunk[3], :] = y_estimates[i]
+        stats["r_squared"][chunk[0] : chunk[1], chunk[2] : chunk[3], :, :] = (
+            model_stats[i]["r_squared"]
+        )
+        stats["p_value"][chunk[0] : chunk[1], chunk[2] : chunk[3], :, :] = model_stats[
+            i
+        ]["p_value"]
+        stats["std_error"][chunk[0] : chunk[1], chunk[2] : chunk[3], :, :] = (
+            model_stats[i]["std_error"]
+        )
+        stats["t_value"][chunk[0] : chunk[1], chunk[2] : chunk[3], :, :] = model_stats[
+            i
+        ]["t_value"]
+        stats["coefficients"][chunk[0] : chunk[1], chunk[2] : chunk[3], :, :] = (
+            model_stats[i]["coefficients"]
+        )
 
     t2 = time.time()
     print("Regression time cost (sec):", t2 - t1)
-    return np.squeeze(estimates)
+    return np.squeeze(estimates), stats
 
 
 ########################################################################################################################
@@ -656,7 +714,6 @@ def main_regression(config, target):
         master_seed = config["master_seed"]
     else:
         master_seed = -1
-    overwrite_flag = overwrite_flag
 
     gridcore_classification = config["gridcore_classification"]
     gridcore_continuous = config["gridcore_continuous"]
@@ -756,6 +813,12 @@ def main_regression(config, target):
 
     ds_out = xr.Dataset()
     ds_out.coords["time"] = timeaxis
+    ds_out["reg_predictor"] = xr.DataArray(
+        ["constant"]
+        + predictor_name_static_target
+        + dynamic_predictor_name[0],  # only the first dynamic predictor is used for now
+        dims=("reg_predictor"),
+    )
     if target == "grid":
         with xr.open_dataset(file_stn_nearinfo) as ds_nearinfo:
             xaxis = ds_nearinfo[grid_lon_name].isel(y=0).values
@@ -967,7 +1030,7 @@ def main_regression(config, target):
         if gridcore_continuous.startswith("LWR:"):
             # Transform max limit if necessary
             if var_name in target_vars_max_constrain:
-                print("Perform max constraint for ", var_name)
+                print("Perform max constraint for ", var_name, ": ", target)
 
                 if len(transform_vars[vn]) > 0:
                     maxlimit = {
@@ -982,7 +1045,7 @@ def main_regression(config, target):
 
             print("Perform regression for ", var_name)
             # Get estimates via regression
-            estimates = loop_regression(
+            estimates, stats = loop_regression(
                 stn_value,
                 stn_predictor,
                 nearIndex,
@@ -1048,8 +1111,16 @@ def main_regression(config, target):
 
         if estimates.ndim == 3:
             ds_out[var_name_save] = xr.DataArray(estimates, dims=("y", "x", "time"))
+            for stat_name in stats:
+                ds_out["reg_" + stat_name] = xr.DataArray(
+                    stats[stat_name], dims=("y", "x", "time", "reg_predictor")
+                )
         elif estimates.ndim == 2:
             ds_out[var_name_save] = xr.DataArray(estimates, dims=("stn", "time"))
+            for stat_name in stats:
+                ds_out["reg_" + stat_name] = xr.DataArray(
+                    stats[stat_name].squeeze(), dims=("stn", "time", "reg_predictor")
+                )
 
             # evaluation
             dtmp1 = ds_stn[var_name].values
@@ -1083,6 +1154,7 @@ def main_regression(config, target):
             ds_out[var_name_save + "_metric"] = xr.DataArray(
                 metvalue, dims=("stn", "met")
             )
+
             del dtmp1, dtmp2
 
     # reduce coordinate dims if needed
