@@ -268,8 +268,6 @@ def find_nearstn_for_InStn(
                 nearstn_min,
                 nearstn_max,
             )
-    # t2 = time.time()
-    # print('Time cost (seconds):', t2 - t1)
 
     return nearIndex, nearDistance
 
@@ -339,20 +337,6 @@ def get_near_station_info(config):
     lat_stn_raw = ds_stn[stn_lat_name].values
     lon_stn_raw = ds_stn[stn_lon_name].values
 
-    # for a variable, some stations do not have records
-    var_mean = []
-    lat_stn_valid = []
-    lon_stn_valid = []
-    for v in target_vars:
-        vm = ds_stn[v].mean(dim="time").values
-        lat_v = lat_stn_raw.copy()
-        lon_v = lon_stn_raw.copy()
-        lat_v[np.isnan(vm)] = np.nan
-        lon_v[np.isnan(vm)] = np.nan
-        var_mean.append(vm)
-        lat_stn_valid.append(lat_v)
-        lon_stn_valid.append(lon_v)
-
     ########################################################################################################################
     # read domain information
     ds_domain = xr.load_dataset(infile_grid_domain)
@@ -365,63 +349,124 @@ def get_near_station_info(config):
 
     # initialize output
     ds_nearinfo = ds_domain.copy()
-    ds_nearinfo.coords["near"] = np.arange(nearstn_max)
+    ds_nearinfo.coords["near"] = np.arange(nearstn_max)  # Max number of nearby stations
     ds_nearinfo.coords["stn"] = ds_stn.stn.values
+    ds_nearinfo.coords["time"] = ds_stn.time.values
     for v in ds_stn.data_vars:
         if not "time" in ds_stn[v].dims:
             ds_nearinfo["stn_" + v] = ds_stn[v]
 
     ########################################################################################################################
     # generate near info
-    for i in range(len(target_vars)):
-        lat_stn = lat_stn_valid[i]
-        lon_stn = lon_stn_valid[i]
-        vari = target_vars[i]
+    for i, vari in enumerate(target_vars):
+        print(f"Processing variable: {vari}")
 
-        print("Processing:", vari)
+        # Get unique station combinations for this variable
+        unique_stn_list_idx = np.unique(ds_stn[vari + "_avail_stn_idx_values"].values)
+
+        # Initialize arrays with time dimension for this variable
+        ntime = len(ds_stn.time)
+        nrows, ncols = lat_grid.shape
+        nstn = len(ds_stn.stn)
+
+        nearIndex_Grid_all = -99999 * np.ones(
+            [ntime, nrows, ncols, nearstn_max], dtype=int
+        )
+        nearDistance_Grid_all = np.nan * np.ones(
+            [ntime, nrows, ncols, nearstn_max], dtype=np.float32
+        )
+        nearIndex_InStn_all = -99999 * np.ones([ntime, nstn, nearstn_max], dtype=int)
+        nearDistance_InStn_all = np.nan * np.ones(
+            [ntime, nstn, nearstn_max], dtype=np.float32
+        )
 
         ########################################################################################################################
-        # find nearby stations for stations/grids
-        t11 = time.time()
-        nearIndex_Grid, nearDistance_Grid = find_nearstn_for_Grids_serial(
-            lat_stn,
-            lon_stn,
-            lat_grid,
-            lon_grid,
-            mask_grid,
-            try_radius,
-            nearstn_min,
-            nearstn_max,
-            initial_distance,
-        )
-        # nearIndex_Grid, nearDistance_Grid   = find_nearstn_for_Grids(lat_stn, lon_stn, lat_grid, lon_grid, mask_grid, try_radius, nearstn_min,
-        #                                                            nearstn_max, initial_distance, num_processes)
-        nearIndex_InStn, nearDistance_InStn = find_nearstn_for_InStn(
-            lat_stn, lon_stn, try_radius, nearstn_min, nearstn_max, initial_distance
-        )
-        t22 = time.time()
-        print("Time cost (s) of getting near station index and distance:", t22 - t11)
+        # find nearby stations for each unique station combination
+        for stn_list_idx in unique_stn_list_idx:
+            print(
+                f"  Processing station combination {stn_list_idx}/{len(unique_stn_list_idx) - 1}"
+            )
+
+            # Get timesteps with this station combination
+            time_mask = ds_stn[vari + "_avail_stn_idx_values"].values == stn_list_idx
+
+            time_indices = np.where(time_mask)[0]
+
+            # Get the mean value to identify available stations
+            vm = ds_stn[vari].isel(time=time_mask).copy().values.mean(axis=0)
+
+            # If the data is not available, skip this station combination
+            if np.isnan(vm).all():
+                print(
+                    f"Data is not available for station combination {stn_list_idx}. Skip."
+                )
+                continue
+
+            # Get the lat and lon of available stations
+            lat_stn = lat_stn_raw.copy()
+            lon_stn = lon_stn_raw.copy()
+            lat_stn[np.isnan(vm)] = np.nan
+            lon_stn[np.isnan(vm)] = np.nan
+
+            # Find nearby stations for grids
+            nearIndex_Grid, nearDistance_Grid = find_nearstn_for_Grids_serial(
+                lat_stn,
+                lon_stn,
+                lat_grid,
+                lon_grid,
+                mask_grid,
+                try_radius,
+                nearstn_min,
+                nearstn_max,
+                initial_distance,
+            )
+
+            # nearIndex_Grid, nearDistance_Grid = find_nearstn_for_Grids(lat_stn, lon_stn, lat_grid, lon_grid, mask_grid, try_radius, nearstn_min,
+            #                                                            nearstn_max, initial_distance, num_processes)
+
+            # Find nearby stations for input stations
+            nearIndex_InStn, nearDistance_InStn = find_nearstn_for_InStn(
+                lat_stn, lon_stn, try_radius, nearstn_min, nearstn_max, initial_distance
+            )
+
+            # Map results to all timesteps with this station combination
+            for t_idx in time_indices:
+                nearIndex_Grid_all[t_idx, :, :, :] = nearIndex_Grid
+                nearDistance_Grid_all[t_idx, :, :, :] = nearDistance_Grid
+                nearIndex_InStn_all[t_idx, :, :] = nearIndex_InStn
+                nearDistance_InStn_all[t_idx, :, :] = nearDistance_InStn
 
         ########################################################################################################################
-        # add near info to output file
+        # add near info to output file with time dimension
+        # Performance note: Creating xr.DataArray objects and adding them to the dataset can be slow
+        # for large arrays. Consider using chunking or dask arrays for better performance.
+        # The main bottleneck is likely the to_netcdf() call with compression.
+
         ds_nearinfo["nearIndex_Grid_" + vari] = xr.DataArray(
-            nearIndex_Grid, dims=("y", "x", "near")
+            nearIndex_Grid_all, dims=("time", "y", "x", "near")
         )
         ds_nearinfo["nearDistance_Grid_" + vari] = xr.DataArray(
-            nearDistance_Grid, dims=("y", "x", "near")
+            nearDistance_Grid_all, dims=("time", "y", "x", "near")
         )
         ds_nearinfo["nearIndex_InStn_" + vari] = xr.DataArray(
-            nearIndex_InStn, dims=("stn", "near")
+            nearIndex_InStn_all, dims=("time", "stn", "near")
         )
         ds_nearinfo["nearDistance_InStn_" + vari] = xr.DataArray(
-            nearDistance_InStn, dims=("stn", "near")
+            nearDistance_InStn_all, dims=("time", "stn", "near")
         )
 
     # save to output files
-    encoding = {}
-    for var in ds_nearinfo.data_vars:
-        encoding[var] = {"zlib": True, "complevel": 4}
-    ds_nearinfo.to_netcdf(file_stn_nearinfo, encoding=encoding)
+    # Performance bottleneck: Writing large netCDF files with compression is slow
+    # Potential optimizations:
+    # 1. Reduce complevel (e.g., from 4 to 1-2) for faster writing with slightly larger files
+    # 2. Use chunking to optimize I/O: encoding[var] = {"zlib": True, "complevel": 4, "chunksizes": (1, y_size, x_size, near_size)}
+    # 3. Consider using netCDF4 engine explicitly: ds_nearinfo.to_netcdf(..., engine='netcdf4')
+    # 4. For very large files, consider writing without compression first, then compress separately
+    # encoding = {}
+    # for var in ds_nearinfo.data_vars:
+    #     encoding[var] = {"zlib": True, "complevel": 2}
+    print(f"Saving {file_stn_nearinfo}")
+    ds_nearinfo.to_netcdf(file_stn_nearinfo)  # , encoding=encoding)
 
     t2 = time.time()
     print("Time cost (s):", t2 - t1)

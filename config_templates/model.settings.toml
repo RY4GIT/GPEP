@@ -77,31 +77,34 @@ print_config = false
 
 # overwrite existing files
 
-# When you change the model spatial resolution, make the following items all true
+###### STATION / DATA ######
 
-# When you change the input data (e.g., add variables), change these.
-
-# **overwrite_stninfo**: Files related integrated station inputs and nearby information
-overwrite_stninfo = false 
+# **overwrite_merged_stnfile**: Merge multiple input data files
 overwrite_merged_stnfile = false
 
-# When you run a new model, change these.
+# **overwrite_stninfo**: Files related integrated station inputs and nearby information
+overwrite_stninfo = true 
+
+# **overwrite_weight**: For station weight file  
+overwrite_weight = true
+
+###### REGRESSION ######
+# **overwrite_cv_reg**: For station-based regression cross validation file
+overwrite_stn_cv_reg = false
+
+# **overwrite_grid_reg**: For gridded regression file  
+overwrite_grid_reg = false
+
+###### SCRF ######
+# **overwrite_spcorr**: For spatial correlation structure files  
+# ****** This spatial correlation file takes time ******
+overwrite_spcorr = false
 
 # **overwrite_station_cc**: For the station space-time correlation file  
 overwrite_station_cc = false
 
-# **overwrite_weight**: For station weight file  
-overwrite_weight = false
-
-# **overwrite_cv_reg**: For station-based cross validation file (is it being used?)
-overwrite_stn_cv_reg = true
-
-# **overwrite_grid_reg**: For gridded regression file  
-overwrite_grid_reg = true
+###### ENSEMBLE ######
 
 # **overwrite_ens**: For ensemble output files  
 overwrite_ens = false
 
-# **overwrite_spcorr**: For spatial correlation structure files  
-###### This spatial correlation file takes time ######
-overwrite_spcorr = false
