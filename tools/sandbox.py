@@ -20,3 +20,9 @@ reg_grid_path = r"G:\Shared drives\Ryoko and Hilary\q-field\out\gpep\AZWG\regres
 reg_grid = xr.load_dataset(reg_grid_path)
 reg_grid
 # %%
+near_path = r"G:\Shared drives\Ryoko and Hilary\q-field\out\gpep\AZWG\stn_info\all_stn_weight.nc"
+near = xr.load_dataset(near_path)
+near
+# %%
+near.nearWeight_InStn_sm.isel(stn_combo_sm=0).plot()
+# %%

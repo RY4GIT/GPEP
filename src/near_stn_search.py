@@ -189,6 +189,8 @@ def find_nearstn_for_Grids_serial(
                     nearstn_min,
                     nearstn_max,
                 )
+                if np.isnan(nd):
+                    print("stop")
                 nearIndex[rr, cc, :], nearDistance[rr, cc, :] = ni, nd
 
     return nearIndex, nearDistance

@@ -1,4 +1,4 @@
-import os, sys, time
+import os, time
 import xarray as xr
 import numpy as np
 
@@ -56,13 +56,15 @@ def calculate_weights_from_distance(
                             distij, max_dist, formula
                         )
 
-    else:
-        sys.exit("Error! nearDistance must have ndim 2 or 3.")
-
-    return nearWeight
-
 
 def calculate_weight_using_nearstn_info(config):
+    """
+    This is the main function of this module.
+
+    This module is used to calculate weights based on near station info.
+
+    """
+
     t1 = time.time()
 
     # parse and change configurations
@@ -114,12 +116,55 @@ def calculate_weight_using_nearstn_info(config):
         if keyword in var:
             print("Processing:", var)
             nearDistance = ds_inout[var].values
-            nearWeight = calculate_weights_from_distance(
-                nearDistance, initial_distance, 3, weight_formula
-            )
+            dims = ds_inout[var].dims
+
+            # Determine the structure and calculate weights accordingly
+            if "Grid" in var:
+                # Grid variables: (stn_combo, y, x, near)
+                print(f"  Dimensions: {dims} - Processing as Grid data")
+                n_combo, nrow, ncol, n_near = (
+                    nearDistance.shape
+                )  # ('stn_combo_sm', 'y', 'x', 'near')
+                nearWeight = np.nan * np.ones(
+                    [n_combo, nrow, ncol, n_near], dtype=np.float32
+                )
+
+                for combo in range(n_combo):
+                    for i in range(nrow):
+                        for j in range(ncol):
+                            nearWeight[combo, i, j, :] = (
+                                calculate_weights_from_distance(
+                                    nearDistance[combo, i, j, :],
+                                    initial_distance,
+                                    3,
+                                    weight_formula,
+                                )
+                            )
+
+            elif "InStn" in var:
+                # Station variables: (stn_combo, stn, near)
+                print(f"  Dimensions: {dims} - Processing as Station data")
+                n_combo, nstn, n_near = nearDistance.shape
+                nearWeight = np.nan * np.ones([n_combo, nstn, n_near], dtype=np.float32)
+
+                for combo in range(n_combo):
+                    for s in range(nstn):
+                        nearWeight[combo, s, :] = calculate_weights_from_distance(
+                            nearDistance[combo, s, :],
+                            initial_distance,
+                            3,
+                            weight_formula,
+                        )
+            else:
+                print(f"  WARNING: Unknown variable type for {var}, skipping")
+                continue
+
+            # Apply truncation distance
             nearWeight[nearDistance > truncation_dist] = 0
+
+            # Add to dataset
             ds_inout[var.replace(keyword, "nearWeight")] = xr.DataArray(
-                nearWeight, dims=ds_inout[var].dims
+                nearWeight, dims=dims
             )
 
     # drop some vars
