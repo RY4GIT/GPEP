@@ -351,7 +351,6 @@ def get_near_station_info(config):
     ds_nearinfo = ds_domain.copy()
     ds_nearinfo.coords["near"] = np.arange(nearstn_max)  # Max number of nearby stations
     ds_nearinfo.coords["stn"] = ds_stn.stn.values
-    ds_nearinfo.coords["time"] = ds_stn.time.values
     for v in ds_stn.data_vars:
         if not "time" in ds_stn[v].dims:
             ds_nearinfo["stn_" + v] = ds_stn[v]
@@ -363,34 +362,34 @@ def get_near_station_info(config):
 
         # Get unique station combinations for this variable
         unique_stn_list_idx = np.unique(ds_stn[vari + "_avail_stn_idx_values"].values)
+        n_unique_combos = len(unique_stn_list_idx)
 
-        # Initialize arrays with time dimension for this variable
-        ntime = len(ds_stn.time)
+        # Initialize arrays indexed by station combination for this variable
         nrows, ncols = lat_grid.shape
         nstn = len(ds_stn.stn)
 
         nearIndex_Grid_all = -99999 * np.ones(
-            [ntime, nrows, ncols, nearstn_max], dtype=int
+            [n_unique_combos, nrows, ncols, nearstn_max], dtype=int
         )
         nearDistance_Grid_all = np.nan * np.ones(
-            [ntime, nrows, ncols, nearstn_max], dtype=np.float32
+            [n_unique_combos, nrows, ncols, nearstn_max], dtype=np.float32
         )
-        nearIndex_InStn_all = -99999 * np.ones([ntime, nstn, nearstn_max], dtype=int)
+        nearIndex_InStn_all = -99999 * np.ones(
+            [n_unique_combos, nstn, nearstn_max], dtype=int
+        )
         nearDistance_InStn_all = np.nan * np.ones(
-            [ntime, nstn, nearstn_max], dtype=np.float32
+            [n_unique_combos, nstn, nearstn_max], dtype=np.float32
         )
 
         ########################################################################################################################
         # find nearby stations for each unique station combination
-        for stn_list_idx in unique_stn_list_idx:
+        for combo_idx, stn_list_idx in enumerate(unique_stn_list_idx):
             print(
-                f"  Processing station combination {stn_list_idx}/{len(unique_stn_list_idx) - 1}"
+                f"  Processing station combination {combo_idx + 1}/{n_unique_combos} (stn_list_idx={stn_list_idx})"
             )
 
             # Get timesteps with this station combination
             time_mask = ds_stn[vari + "_avail_stn_idx_values"].values == stn_list_idx
-
-            time_indices = np.where(time_mask)[0]
 
             # Get the mean value to identify available stations
             vm = ds_stn[vari].isel(time=time_mask).copy().values.mean(axis=0)
@@ -429,30 +428,28 @@ def get_near_station_info(config):
                 lat_stn, lon_stn, try_radius, nearstn_min, nearstn_max, initial_distance
             )
 
-            # Map results to all timesteps with this station combination
-            for t_idx in time_indices:
-                nearIndex_Grid_all[t_idx, :, :, :] = nearIndex_Grid
-                nearDistance_Grid_all[t_idx, :, :, :] = nearDistance_Grid
-                nearIndex_InStn_all[t_idx, :, :] = nearIndex_InStn
-                nearDistance_InStn_all[t_idx, :, :] = nearDistance_InStn
+            # Store results indexed by station combination
+            nearIndex_Grid_all[combo_idx, :, :, :] = nearIndex_Grid
+            nearDistance_Grid_all[combo_idx, :, :, :] = nearDistance_Grid
+            nearIndex_InStn_all[combo_idx, :, :] = nearIndex_InStn
+            nearDistance_InStn_all[combo_idx, :, :] = nearDistance_InStn
 
         ########################################################################################################################
-        # add near info to output file with time dimension
-        # Performance note: Creating xr.DataArray objects and adding them to the dataset can be slow
-        # for large arrays. Consider using chunking or dask arrays for better performance.
-        # The main bottleneck is likely the to_netcdf() call with compression.
+        # add near info to output file indexed by station combination
+        # Create a coordinate for the station combination index
+        ds_nearinfo.coords["stn_combo_" + vari] = unique_stn_list_idx
 
         ds_nearinfo["nearIndex_Grid_" + vari] = xr.DataArray(
-            nearIndex_Grid_all, dims=("time", "y", "x", "near")
+            nearIndex_Grid_all, dims=("stn_combo_" + vari, "y", "x", "near")
         )
         ds_nearinfo["nearDistance_Grid_" + vari] = xr.DataArray(
-            nearDistance_Grid_all, dims=("time", "y", "x", "near")
+            nearDistance_Grid_all, dims=("stn_combo_" + vari, "y", "x", "near")
         )
         ds_nearinfo["nearIndex_InStn_" + vari] = xr.DataArray(
-            nearIndex_InStn_all, dims=("time", "stn", "near")
+            nearIndex_InStn_all, dims=("stn_combo_" + vari, "stn", "near")
         )
         ds_nearinfo["nearDistance_InStn_" + vari] = xr.DataArray(
-            nearDistance_InStn_all, dims=("time", "stn", "near")
+            nearDistance_InStn_all, dims=("stn_combo_" + vari, "stn", "near")
         )
 
     # save to output files
