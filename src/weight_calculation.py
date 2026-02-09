@@ -1,6 +1,7 @@
 import os, time
 import xarray as xr
 import numpy as np
+from tqdm import tqdm
 
 
 def distanceweight(dist, maxdist=100, exp=3):
@@ -20,41 +21,28 @@ def calculate_weights_from_distance(
 ):
     # calculate weights
 
-    if nearDistance.ndim == 2:
-        nstn = nearDistance.shape[0]
-        nearWeight = np.nan * np.ones([nstn, nearDistance.shape[1]], dtype=np.float32)
-        for i in range(nstn):
-            disti = nearDistance[i, :]
-            if disti[0] >= 0:
-                disti = disti[disti >= 0]
-                max_dist = np.max([initial_distance, np.max(disti) + 1])
-                if len(formula) == 0:
-                    nearWeight[i, 0 : len(disti)] = distanceweight(disti, max_dist, exp)
-                else:
-                    nearWeight[i, 0 : len(disti)] = distanceweight_userdefined(
-                        disti, max_dist, formula
-                    )
+    # Handle 1D input (single location)
+    if nearDistance.ndim == 1:
+        # Prepare
+        nearWeight = np.full_like(nearDistance, np.nan, dtype=np.float32)
+        valid = np.isfinite(nearDistance) & (nearDistance >= 0)
+        if not np.any(valid):
+            return nearWeight
+        nearDistance_valid = nearDistance[valid]
+        max_dist = np.max([initial_distance, np.max(nearDistance_valid) + 1])
 
-    elif nearDistance.ndim == 3:
-        nrow = nearDistance.shape[0]
-        ncol = nearDistance.shape[1]
-        nearWeight = np.nan * np.ones(
-            [nrow, ncol, nearDistance.shape[2]], dtype=np.float32
-        )
-        for i in range(nrow):
-            for j in range(ncol):
-                distij = nearDistance[i, j, :]
-                if distij[0] >= 0:
-                    distij = distij[distij >= 0]
-                    max_dist = np.max([initial_distance, np.max(distij) + 1])
-                    if len(formula) == 0:
-                        nearWeight[i, j, 0 : len(distij)] = distanceweight(
-                            distij, max_dist, exp
-                        )
-                    else:
-                        nearWeight[i, j, 0 : len(distij)] = distanceweight_userdefined(
-                            distij, max_dist, formula
-                        )
+        # Calculate weights
+        if len(formula) == 0:
+            nearWeight[valid] = distanceweight(nearDistance_valid, max_dist, exp)
+        else:
+            nearWeight[valid] = distanceweight_userdefined(
+                nearDistance_valid, max_dist, formula
+            )
+        return nearWeight
+
+    else:
+        print("Error: nearDistance must be 1D or 2D")
+        return None
 
 
 def calculate_weight_using_nearstn_info(config):
@@ -89,7 +77,10 @@ def calculate_weight_using_nearstn_info(config):
 
     # default settings
     keyword = "nearDistance"  # defined in near station search
-    keywords_drop = ["nearDistance", "nearIndex"]
+    keywords_drop = [
+        "nearDistance",
+        "nearIndex",
+    ]  # TODO: why do I wet drop this variable? For later?
     truncation_dist = (
         np.inf
     )  # stations beyond this distance have zero weights. this is not activated for now
@@ -129,7 +120,7 @@ def calculate_weight_using_nearstn_info(config):
                     [n_combo, nrow, ncol, n_near], dtype=np.float32
                 )
 
-                for combo in range(n_combo):
+                for combo in tqdm(range(n_combo), desc="Processing combos"):
                     for i in range(nrow):
                         for j in range(ncol):
                             nearWeight[combo, i, j, :] = (
@@ -147,7 +138,7 @@ def calculate_weight_using_nearstn_info(config):
                 n_combo, nstn, n_near = nearDistance.shape
                 nearWeight = np.nan * np.ones([n_combo, nstn, n_near], dtype=np.float32)
 
-                for combo in range(n_combo):
+                for combo in tqdm(range(n_combo), desc="Processing combos"):
                     for s in range(nstn):
                         nearWeight[combo, s, :] = calculate_weights_from_distance(
                             nearDistance[combo, s, :],
@@ -155,6 +146,7 @@ def calculate_weight_using_nearstn_info(config):
                             3,
                             weight_formula,
                         )
+
             else:
                 print(f"  WARNING: Unknown variable type for {var}, skipping")
                 continue

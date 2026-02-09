@@ -25,8 +25,8 @@ nearstn_max = 27  # nearby stations: maximum number
 # Weight calculation formula. See ./docs/How_to_create_config_files.md for instruction.
 weight_formula = '(1 - (dist / maxdist) ** 3) ** 3'
 
-# Initial Search Distance in km
-initial_distance = 100
+# Initial Search Distance in km  - 1m be effectively uses the max distance between stations as weight
+initial_distance = 0.001
 
 # first try this radius (km). if not enough, expand. Could be useful to reduce computation time for large domain search.
 try_radius = 10000
@@ -83,7 +83,7 @@ print_config = false
 overwrite_merged_stnfile = false
 
 # **overwrite_stninfo**: Files related integrated station inputs and nearby information
-overwrite_stninfo = true 
+overwrite_stninfo = false 
 
 # **overwrite_weight**: For station weight file  
 overwrite_weight = true
