@@ -42,3 +42,25 @@ weight.nearWeight_Grid_sm.isel(stn_combo_sm=0).sel(near=5).plot()
 weight.nearWeight_InStn_sm.sel(stn_combo_sm=0).plot()
 
 # %%
+grid_reg_path = r"G:\Shared drives\Ryoko and Hilary\q-field\out\gpep\AZWG\regression\AZWGdynamic_grid_regression_20170810-20170902.nc"
+grid_reg = xr.load_dataset(grid_reg_path)
+# %%
+grid_reg.reg_r_squared.isel(lat=0, lon=0, reg_predictor=0).plot()
+# %%
+import matplotlib.pyplot as plt
+
+fig, ax = plt.subplots(figsize=(10, 10))
+for i in range(1, len(grid_reg.reg_predictor)):
+    grid_reg.reg_coefficients.isel(lat=0, lon=0, reg_predictor=i).plot(ax=ax)
+
+# %%
+reg_stn_path = r"G:\Shared drives\Ryoko and Hilary\q-field\out\gpep\AZWG\regression\AZWGdynamic_stn_CV_regression_20170810-20170902.nc"
+reg_stn = xr.load_dataset(reg_stn_path)
+reg_stn
+
+# %%
+reg_stn.reg_coefficients.isel(reg_predictor=0).plot()
+# %%
+reg_stn.reg_r_squared
+# %%
+reg_stn

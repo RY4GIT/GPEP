@@ -363,7 +363,7 @@ def regression_for_a_chunk(r1, r2, c1, c2, data=None):
 
     ydata_tar = np.nan * np.zeros([r2 - r1, c2 - c1, ntime])
     model_stats = {
-        "r_squared": np.nan * np.zeros([r2 - r1, c2 - c1, ntime, npredictor]),
+        "r_squared": np.nan * np.zeros([r2 - r1, c2 - c1, ntime]),
         "p_value": np.nan * np.zeros([r2 - r1, c2 - c1, ntime, npredictor]),
         "std_error": np.nan * np.zeros([r2 - r1, c2 - c1, ntime, npredictor]),
         "t_value": np.nan * np.zeros([r2 - r1, c2 - c1, ntime, npredictor]),
@@ -373,25 +373,25 @@ def regression_for_a_chunk(r1, r2, c1, c2, data=None):
     # Loop through each grid cell in the chunk
     for r in range(r1, r2):
         for c in range(c1, c2):
-            # prepare xdata and sample weight for training the regression model
-            # tar_nearIndex (nrow, ncol, stn)
-            sample_nearIndex = tar_nearIndex[r, c, :]
-            index_valid = sample_nearIndex >= 0
+            # interpolation for every time step
+            for t in range(ntime):
+                # prepare xdata and sample weight for training the regression model
+                _sample_nearIndex = tar_nearIndex[t, r, c, :]
+                _sample_weight = tar_nearWeight[t, r, c, :]
+                index_valid = _sample_weight >= 0
+                if np.sum(index_valid) > 0:
+                    # tar_nearIndex (ntime, nrow, ncol, stn)
+                    # tar_nearWeight (ntime, nrow, ncol, stn)
+                    # stn_predictor (stn, predictor)
+                    # tar_predictor(nrow, ncol, predictor)
+                    # xdata_near0 (stn, predictor)
+                    # xdata_g0 (predictor)
 
-            if np.sum(index_valid) > 0:
-                # tar_nearWeight (nrow, ncol, stn)
-                # stn_predictor (stn, predictor)
-                # tar_predictor(nrow, ncol, predictor)
-                # xdata_near0 (stn, predictor)
-                # xdata_g0 (predictor)
+                    sample_nearIndex = _sample_nearIndex[index_valid]
+                    sample_weight = _sample_weight[index_valid]
+                    xdata_near0 = stn_predictor[sample_nearIndex, :]
+                    xdata_g0 = tar_predictor[r, c, :]
 
-                sample_nearIndex = sample_nearIndex[index_valid]
-                sample_weight = tar_nearWeight[r, c, :][index_valid]
-                xdata_near0 = stn_predictor[sample_nearIndex, :]
-                xdata_g0 = tar_predictor[r, c, :]
-
-                # interpolation for every time step
-                for t in range(ntime):
                     #########################################################
                     # PREPARE PREDICTOR MATRIX
                     #########################################################
@@ -452,7 +452,7 @@ def regression_for_a_chunk(r1, r2, c1, c2, data=None):
                             x_test=xdata_g,
                         )
 
-                        model_stats["r_squared"][r - r1, c - c1, t, :] = model.rsquared
+                        model_stats["r_squared"][r - r1, c - c1, t] = model.rsquared
                         model_stats["p_value"][r - r1, c - c1, t, :] = model.pvalues
                         model_stats["std_error"][r - r1, c - c1, t, :] = (
                             model.bse
@@ -488,7 +488,9 @@ def loop_regression(
 
     # Get the dimensions
     (ntime, nstn) = np.shape(stn_data)
-    nrow, ncol, nearmax = np.shape(tar_nearIndex)
+    _, nrow, ncol, _ = np.shape(
+        tar_nearIndex
+    )  # ntime, 1, nstn, nstn or ntime, nrow, ncol, nstn
 
     # Create a list of chunks to process
     if nrow > ncol:
@@ -506,6 +508,7 @@ def loop_regression(
         data["tar_nearIndex"] = tar_nearIndex
         data["tar_nearWeight"] = tar_nearWeight
         data["tar_predictor"] = tar_predictor
+        # data["stn_combo_idx"] = stn_combo_idx
         data["method"] = method
         data["probflag"] = probflag
         data["settings"] = settings
@@ -543,7 +546,7 @@ def loop_regression(
         + np.shape(dynamic_predictors["stn_predictor_dynamic"])[0]
     )
     stats = dict(
-        r_squared=np.nan * np.zeros([nrow, ncol, ntime, npredictor], dtype=np.float32),
+        r_squared=np.nan * np.zeros([nrow, ncol, ntime], dtype=np.float32),
         p_value=np.nan * np.zeros([nrow, ncol, ntime, npredictor], dtype=np.float32),
         std_error=np.nan * np.zeros([nrow, ncol, ntime, npredictor], dtype=np.float32),
         t_value=np.nan * np.zeros([nrow, ncol, ntime, npredictor], dtype=np.float32),
@@ -552,9 +555,9 @@ def loop_regression(
     )
     for i, chunk in enumerate(chunks):
         estimates[chunk[0] : chunk[1], chunk[2] : chunk[3], :] = y_estimates[i]
-        stats["r_squared"][chunk[0] : chunk[1], chunk[2] : chunk[3], :, :] = (
-            model_stats[i]["r_squared"]
-        )
+        stats["r_squared"][chunk[0] : chunk[1], chunk[2] : chunk[3], :] = model_stats[
+            i
+        ]["r_squared"]
         stats["p_value"][chunk[0] : chunk[1], chunk[2] : chunk[3], :, :] = model_stats[
             i
         ]["p_value"]
@@ -932,7 +935,9 @@ def main_regression(config, target):
         ########################################################################################################################
         # load data for regression
 
+        ################################
         # station data
+        ################################
         with xr.open_dataset(file_allstn) as ds_stn:
             ds_stn = ds_stn.sel(time=slice(date_start, date_end))
 
@@ -950,16 +955,40 @@ def main_regression(config, target):
                     predictor_name_static_stn[i]
                 ].values
 
-        ### near information ###
+            # Get combo index values per timestep for the station data
+            ds_stn_combo_idx = ds_stn[var_name + "_avail_stn_idx_values"].values
+
+        ################################
+        # near information ###
+        ################################
         with xr.open_dataset(file_stn_nearinfo) as ds_nearinfo:
-            # nearDistance = ds_nearinfo['nearDistance_InStn_' + var_name].values
-            vtmp = f"nearIndex_{near_keyword}_{var_name}"
-            if vtmp in ds_nearinfo.data_vars:
+            # Get the near index data with station combination dimension
+            nearIndex_combo = ds_nearinfo[f"nearIndex_{near_keyword}_{var_name}"]
+            if f"stn_combo_{var_name}" in nearIndex_combo.dims:
+                ntime = len(ds_stn_combo_idx)
+
+                # Initialize near index array
                 if target == "grid":
-                    nearIndex = ds_nearinfo[vtmp].values.copy()
+                    # nearIndex_combo dims: (stn_combo, y, x, near)
+                    _, ny, nx, n_near = nearIndex_combo.shape
+                    nearIndex = np.zeros(
+                        [ntime, ny, nx, n_near], dtype=nearIndex_combo.dtype
+                    )
+
                 elif target == "cval":
-                    # nearIndex = ds_nearinfo[vtmp][np.newaxis, :, :].copy()
-                    nearIndex = np.expand_dims(ds_nearinfo[vtmp].values, axis=0)
+                    # nearIndex_combo dims: (stn_combo, stn, near)
+                    _, nstn, n_near = nearIndex_combo.shape
+                    # Expand dimension: (time, 1, stn, near) to match tar_predictor structure
+                    nearIndex = np.zeros(
+                        [ntime, 1, nstn, n_near], dtype=nearIndex_combo.dtype
+                    )
+
+                # Map each timestep to its corresponding combo
+                for t in range(ntime):
+                    nearIndex[t, :, :, :] = nearIndex_combo.sel(
+                        stn_combo_sm=ds_stn_combo_idx[t]
+                    ).values
+
             else:
                 sys.exit(
                     f"Cannot find nearIndex_{near_keyword}_{var_name} in {file_stn_nearinfo}"
@@ -968,7 +997,8 @@ def main_regression(config, target):
         ### predictor information ###
         if target == "grid":
             with xr.open_dataset(file_stn_nearinfo) as ds_nearinfo:
-                nrow, ncol, nearmax = np.shape(nearIndex)
+                # ds_nearinfo = ds_nearinfo.sel(time=slice(date_start, date_end))
+                _, nrow, ncol, _ = np.shape(nearIndex)
                 predictor_static_target = np.ones(
                     [nrow, ncol, len(predictor_name_static_stn) + 1]
                 )  # first column used for regression
@@ -983,12 +1013,35 @@ def main_regression(config, target):
         with xr.open_dataset(file_stn_weight) as ds_weight:
             vtmp = f"nearWeight_{near_keyword}_{var_name}"
             if vtmp in ds_weight.data_vars:
-                if target == "grid":
-                    nearWeight = ds_weight[vtmp].values.copy()
-                elif target == "cval":
-                    nearWeight = np.expand_dims(
-                        ds_weight[vtmp].values, axis=0
-                    )  # ds_weight[vtmp][np.newaxis, :, :].copy()
+                # Get the nearWeight data with station combination dimension
+                nearWeight_combo = ds_weight[
+                    vtmp
+                ]  # dims: (stn_combo_X, stn/y, near/x, near)
+
+                if f"stn_combo_{var_name}" in nearWeight_combo.dims:
+                    ntime = len(ds_stn_combo_idx)
+
+                    if target == "grid":
+                        # nearWeight_combo dims: (stn_combo, y, x, near)
+                        _, ny, nx, n_near = nearWeight_combo.shape
+                        nearWeight = np.zeros(
+                            [ntime, ny, nx, n_near], dtype=nearWeight_combo.dtype
+                        )
+
+                    elif target == "cval":
+                        # nearWeight_combo dims: (stn_combo, stn, near)
+                        _, nstn, n_near = nearWeight_combo.shape
+                        # Expand dimension: (time, 1, stn, near) to match tar_predictor structure
+                        nearWeight = np.zeros(
+                            [ntime, 1, nstn, n_near], dtype=nearWeight_combo.dtype
+                        )
+
+                    # Map each timestep to its corresponding combo
+                    for t in range(ntime):
+                        nearWeight[t, :, :, :] = nearWeight_combo.sel(
+                            stn_combo_sm=ds_stn_combo_idx[t]
+                        ).values
+
             else:
                 sys.exit(
                     f"Cannot find nearWeight_{near_keyword}_{var_name} in {file_stn_weight}"
@@ -1118,9 +1171,15 @@ def main_regression(config, target):
         elif estimates.ndim == 2:
             ds_out[var_name_save] = xr.DataArray(estimates, dims=("stn", "time"))
             for stat_name in stats:
-                ds_out["reg_" + stat_name] = xr.DataArray(
-                    stats[stat_name].squeeze(), dims=("stn", "time", "reg_predictor")
-                )
+                if stats[stat_name].ndim == 4:
+                    ds_out["reg_" + stat_name] = xr.DataArray(
+                        stats[stat_name].squeeze(),
+                        dims=("stn", "time", "reg_predictor"),
+                    )
+                elif stats[stat_name].ndim == 3:
+                    ds_out["reg_" + stat_name] = xr.DataArray(
+                        stats[stat_name].squeeze(), dims=("stn", "time")
+                    )
 
             # evaluation
             dtmp1 = ds_stn[var_name].values

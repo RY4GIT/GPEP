@@ -86,11 +86,11 @@ overwrite_merged_stnfile = false
 overwrite_stninfo = false 
 
 # **overwrite_weight**: For station weight file  
-overwrite_weight = true
+overwrite_weight = false
 
 ###### REGRESSION ######
 # **overwrite_cv_reg**: For station-based regression cross validation file
-overwrite_stn_cv_reg = false
+overwrite_stn_cv_reg = true
 
 # **overwrite_grid_reg**: For gridded regression file  
 overwrite_grid_reg = false
