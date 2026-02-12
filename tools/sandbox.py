@@ -69,5 +69,5 @@ auxiliary_path = r"G:\Shared drives\Ryoko and Hilary\q-field\out\gpep\AZWG\regre
 auxiliary = xr.load_dataset(auxiliary_path)
 auxiliary
 # %%
-auxiliary.uncert_sm.isel(time=6).plot()
+auxiliary.uncert_sm.isel(time=4).plot()
 # %%

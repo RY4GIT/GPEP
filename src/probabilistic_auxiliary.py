@@ -342,7 +342,7 @@ def extrapolate_auxiliary_info(config):
         for t in tqdm(range(ntime)):
             # Calculate distance-weighted average leave-one-out error for this timestep
             _error[:, :, t] = extrapolation(
-                (loo_value - stn_value.T)[:, t],
+                ((loo_value - stn_value.T)[:, t]) ** 2,
                 nearIndex[t, :, :, :],
                 nearWeight[t, :, :, :],
                 "DirectWeight",
