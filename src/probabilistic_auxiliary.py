@@ -45,7 +45,7 @@ def nearby_station_statistics(stn_data, tar_nearIndex, method):
 
 
 def extrapolation(datain, nearstn_loc, nearstn_DistOrWeright, weighttype, excflag=0):
-    # datain: one or multiple time steps
+    # datain: one or multiple time steps, data to be extrapolated (here, it is the leave-one-out error)
     # excflag: excflag one value that deviates farthest from mean value. this can help reduce outliers when we have less confidence on regression
     # weighttype: 'idw', 'exp', or 'DirectWeight'. 'DirectWeight' means that nearstn_DistOrWeright is just the weight input.
 
@@ -64,37 +64,59 @@ def extrapolation(datain, nearstn_loc, nearstn_DistOrWeright, weighttype, excfla
     nrows, ncols, nearnum = np.shape(nearstn_loc)
     nstn, ntimes = np.shape(datain)
     dataout = np.nan * np.zeros([nrows, ncols, ntimes], dtype=np.float32)
-    for r in tqdm(range(nrows)):
-        for c in tqdm(range(ncols)):
-            # TODO: this is slow, need to optimize or use parallel processing
-            if not nearstn_loc[r, c, 0] >= 0:
-                continue
-            nearloci = nearstn_loc[r, c, :]
-            indloci = nearloci > -1
-            dataini = datain[nearloci[indloci], :]
+    for r in range(nrows):
+        for c in range(ncols):
+            # # TODO: this is slow, need to optimize or use parallel processing
+            # if not nearstn_loc[r, c, 0] >= 0:
+            #     continue
 
+            # Near station and distance information for the grid point (r, c)
+            nearloci = nearstn_loc[r, c, :]
+            disti = nearstn_DistOrWeright[r, c, :]
+
+            # Valid distance and near station indices
+            valid_d = disti > 0
+            valid_near_idx = nearloci[valid_d].astype(int)
+
+            # Leave-one-out error for the valid near stations
+            dataini = datain[valid_near_idx, :]
+
+            # Outlier removal
             if excflag == 1:
-                dmean = np.tile(np.nanmean(dataini, axis=0), [np.sum(indloci), 1])
+                # Get the mean value of the leave-one-out error for each station
+                dmean = np.tile(np.nanmean(dataini, axis=0), [np.sum(valid_d), 1])
+
+                # Calculate the absolute difference between the leave-one-out error and the mean value
                 diff = np.abs(dataini - dmean)
+
+                # Replace the value with NaN that has the largest absolute difference with the mean value,
+                # so that it is not used for the extrapolation (avoid outliers)
                 for j in range(ntimes):
                     dataini[np.nanargmax(diff[:, j]), j] = np.nan
 
-            disti = nearstn_DistOrWeright[r, c, indloci]
+            # Get a valid distance vector for weight calculation
+            disti_valid = disti[valid_d]
             if weighttype == "exp":
-                maxdist = np.max([np.max(disti) + 1, 100])
-                weighti = distanceweight(disti, maxdist, wexp)
+                maxdist = np.max([np.max(disti_valid) + 1, 100])
+                weighti = distanceweight(disti_valid, maxdist, wexp)
             elif weighttype == "idw":
-                disti[disti == 0] = 0.1
-                weighti = 1 / (disti**2)
+                disti_valid[disti_valid == 0] = 0.1
+                weighti = 1 / (disti_valid**2)
             elif weighttype == "DirectWeight":
-                weighti = disti
+                weighti = disti_valid
             else:
                 sys.exit("Unknown weight type")
-            weighti = weighti / np.nansum(weighti)
-            weighti[np.isnan(dataini[:, 0])] = np.nan
-            weighti = weighti / np.nansum(weighti)
-            weighti2 = np.tile(weighti, [ntimes, 1]).T
-            dataout[r, c, :] = np.nansum(dataini * weighti2, axis=0)
+            weighti_norm = weighti / np.nansum(weighti)
+            # weighti_norm[np.isnan(dataini[:, 0])] = np.nan # This is already done
+            # weighti = weighti / np.nansum(weighti) # This is also already done
+            # weighti2 = np.tile(weighti_norm, [ntimes, 1]).T # This is also already done?
+            # dataini is (n_valid_near, 1)
+            # weighti_norm is (n_valid_near, )
+            weighti_norm_expanded = np.expand_dims(weighti_norm, axis=1)
+            weighted_dataini = np.nansum(dataini * weighti_norm_expanded, axis=0)
+            dataout[r, c, :] = weighted_dataini
+            if weighted_dataini[0] is np.nan:
+                print(f"NaN values in dataout at ({r}, {c})")
 
     dataout = np.squeeze(dataout)
 
@@ -246,12 +268,30 @@ def extrapolate_auxiliary_info(config):
             else:
                 stn_value = ds_stn[var_name].values
 
+            # Get combo index values per timestep for the station data
+            stn_combo_idx = ds_stn[var_name + "_avail_stn_idx_values"].values
+
         # near information
         with xr.open_dataset(file_stn_nearinfo) as ds_nearinfo:
             # nearDistance = ds_nearinfo['nearDistance_InStn_' + var_name].values
             vtmp = f"nearIndex_Grid_{var_name}"
-            if vtmp in ds_nearinfo.data_vars:
-                nearIndex = ds_nearinfo[vtmp].values
+            nearIndex_combo = ds_nearinfo[vtmp]
+
+            if f"stn_combo_{var_name}" in nearIndex_combo.dims:
+                # nearIndex_combo dims: (stn_combo, x, y, near)
+                _, nx, ny, n_near = nearIndex_combo.shape
+                ntime = len(stn_combo_idx)
+                # Expand dimension: (time, 1, stn, near) to match tar_predictor structure
+                nearIndex = np.zeros(
+                    [ntime, nx, ny, n_near], dtype=nearIndex_combo.dtype
+                )
+
+                # Map each timestep to its corresponding combo
+                for t in range(ntime):
+                    nearIndex[t, :, :, :] = nearIndex_combo.sel(
+                        stn_combo_sm=stn_combo_idx[t]
+                    ).values
+
             else:
                 sys.exit(
                     f"Cannot find nearIndex_Grid_{var_name} in {file_stn_nearinfo}"
@@ -260,10 +300,25 @@ def extrapolate_auxiliary_info(config):
         # weights
         with xr.open_dataset(file_stn_weight) as ds_weight:
             vtmp = f"nearWeight_Grid_{var_name}"
-            if vtmp in ds_weight.data_vars:
-                nearWeight = ds_weight[vtmp].values
+            nearWeight_combo = ds_weight[vtmp]
+
+            if f"stn_combo_{var_name}" in nearWeight_combo.dims:
+                # nearWeight_combo dims: (stn_combo, x, y, near)
+                _, nx, ny, n_near = nearWeight_combo.shape
+                ntime = len(stn_combo_idx)
+                # Expand dimension: (time, x, y, near) to match tar_predictor structure
+                nearWeight = np.zeros(
+                    [ntime, nx, ny, n_near], dtype=nearWeight_combo.dtype
+                )
+
+                # Map each timestep to its corresponding combo
+                for t in range(ntime):
+                    nearWeight[t, :, :, :] = nearWeight_combo.sel(
+                        stn_combo_sm=stn_combo_idx[t]
+                    ).values
+
             else:
-                sys.exit(f"Cannot find nearIndex_Grid_{var_name} in {file_stn_weight}")
+                sys.exit(f"Cannot find nearWeight_Grid_{var_name} in {file_stn_weight}")
 
         ########################################################################################################################
         # interpolation of CV errors
@@ -274,9 +329,27 @@ def extrapolate_auxiliary_info(config):
         # maxvalue = np.nanmax(stn_value, axis=1)[:, np.newaxis]
         # loo_value = np.clip(loo_value, minvalue, maxvalue)  # Apply min and max constraints to loo_value to each station
 
-        _error = extrapolation(
-            (loo_value - stn_value.T) ** 2, nearIndex, nearWeight, "DirectWeight", 0
-        )
+        # loo_value (nstn, ntime)
+        # stn_value (ntime, nstn)
+        # nearIndex (ntime, ny, nx, n_near)
+        # nearWeight (ntime, ny, nx, n_near)
+
+        # Process time-varying nearIndex and nearWeight
+        ntime = nearIndex.shape[0]
+        ny, nx = nearIndex.shape[1], nearIndex.shape[2]
+        _error = np.zeros([ny, nx, ntime], dtype=np.float32)
+
+        for t in tqdm(range(ntime)):
+            # Calculate distance-weighted average leave-one-out error for this timestep
+            _error[:, :, t] = extrapolation(
+                (loo_value - stn_value.T)[:, t],
+                nearIndex[t, :, :, :],
+                nearWeight[t, :, :, :],
+                "DirectWeight",
+                0,
+            )
+
+        # Take a square root of the error to get RMSE (distance-weighted)
         error = _error**0.5
 
         if len(var_name_trans) > 0:
@@ -293,7 +366,15 @@ def extrapolate_auxiliary_info(config):
             print(
                 f"Add min/max nearby values for {var_name} because it is in target_vars_max_constrain {target_vars_max_constrain}"
             )
-            estimates = nearby_station_statistics(stn_value, nearIndex, "max")
+            # Process time-varying nearIndex
+            ntime = nearIndex.shape[0]
+            ny, nx = nearIndex.shape[1], nearIndex.shape[2]
+            estimates = np.zeros([ny, nx, ntime], dtype=np.float32)
+
+            for t in range(ntime):
+                estimates[:, :, t] = nearby_station_statistics(
+                    stn_value[t : t + 1, :], nearIndex[t, :, :, :], "max"
+                )
             if len(var_name_trans) > 0:
                 var_name_save = f"nearmax_{var_name_trans}"
             else:

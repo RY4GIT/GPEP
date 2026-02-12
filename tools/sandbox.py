@@ -64,3 +64,10 @@ reg_stn.reg_coefficients.isel(reg_predictor=0).plot()
 reg_stn.reg_r_squared
 # %%
 reg_stn
+# %%
+auxiliary_path = r"G:\Shared drives\Ryoko and Hilary\q-field\out\gpep\AZWG\regression\AZWGdynamic_auxiliary_20170810-20170902.nc"
+auxiliary = xr.load_dataset(auxiliary_path)
+auxiliary
+# %%
+auxiliary.uncert_sm.isel(time=6).plot()
+# %%
