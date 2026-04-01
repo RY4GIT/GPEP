@@ -177,7 +177,7 @@ def merge_stndata_into_single_file(config):
         # Read all station data files into a list of dataframes
         all_dfs = []
         for i, stnid in enumerate(df_stn.stnid):
-            infilei = f"{input_stn_path}/sm_{stnid}_depth{sensor_depth_cm:02d}cm.csv"
+            infilei = f"{input_stn_path}/sm_{stnid}_depth{sensor_depth_cm}.csv"
             if not os.path.isfile(infilei):
                 print(f"{infilei} does not exist. Skip {stnid}.")
                 continue

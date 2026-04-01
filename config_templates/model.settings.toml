@@ -80,7 +80,7 @@ print_config = false
 ###### STATION / DATA ######
 
 # **overwrite_merged_stnfile**: Merge multiple input data files
-overwrite_merged_stnfile = false
+overwrite_merged_stnfile = true
 
 # **overwrite_stninfo**: Files related integrated station inputs and nearby information
 overwrite_stninfo = false 
