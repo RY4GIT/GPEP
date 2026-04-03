@@ -17,10 +17,12 @@ n_splits = 10 # only useful for sklearn machine learning methods
 ########################################################################################################################
 
 # Number of stations to consider for each target point. nearstn_min<=nearstn_max.
-nearstn_min = 27  # nearby stations: minimum number
-nearstn_max = 27  # nearby stations: maximum number
+nearstn_min = 18  # nearby stations: minimum number
+nearstn_max = 100  # nearby stations: maximum number
 
-# 27 for AZWG?
+# 27 for AZWG
+# 35 for GALR
+# 18 for OKFC
 
 # Weight calculation formula. See ./docs/How_to_create_config_files.md for instruction.
 weight_formula = '(1 - (dist / maxdist) ** 3) ** 3'
