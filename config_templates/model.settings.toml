@@ -10,7 +10,7 @@ master_seed = 20230104
 ########################################################################################################################
 gridcore_continuous = 'LWR:Linear'
 gridcore_classification = 'LWR:Logistic' # for probability of event
-n_splits = 10 # only useful for sklearn machine learning methods
+n_splits = 10 # only useful for sklearn machine learning methods, but don't comment out (throws out error)
 
 ########################################################################################################################
 # distance-based weight calculation
@@ -82,7 +82,7 @@ print_config = false
 ###### STATION / DATA ######
 
 # **overwrite_merged_stnfile**: Merge multiple input data files
-overwrite_merged_stnfile = true
+overwrite_merged_stnfile = false
 
 # **overwrite_stninfo**: Files related integrated station inputs and nearby information
 overwrite_stninfo = false 
@@ -92,7 +92,7 @@ overwrite_weight = false
 
 ###### REGRESSION ######
 # **overwrite_cv_reg**: For station-based regression cross validation file
-overwrite_stn_cv_reg = true
+overwrite_stn_cv_reg = false
 
 # **overwrite_grid_reg**: For gridded regression file  
 overwrite_grid_reg = false
@@ -108,5 +108,5 @@ overwrite_station_cc = false
 ###### ENSEMBLE ######
 
 # **overwrite_ens**: For ensemble output files  
-overwrite_ens = false
+overwrite_ens = true
 

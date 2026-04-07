@@ -419,15 +419,15 @@ def regression_for_a_chunk(r1, r2, c1, c2, data=None):
                         if np.all(~np.isnan(xdata_near_add)) and np.all(
                             ~np.isnan(xdata_g_add)
                         ):
-                            # Whether use a dynamic predictor (if it is static, diff will be close to 0, and we don't need to use it)
-                            diff = np.max(xdata_near_add, axis=0) - np.min(
-                                xdata_near_add, axis=0
-                            )
-                            tolerance = 1e-10
+                            # # Whether use a dynamic predictor (if it is static, diff will be close to 0, and we don't need to use it): Dimension gets messed up; deactivate it for now
+                            # diff = np.max(xdata_near_add, axis=0) - np.min(
+                            #     xdata_near_add, axis=0
+                            # )
+                            # tolerance = 1e-10
 
-                            # Remove stationary dynamic predictors
-                            xdata_near_add = xdata_near_add[:, diff > tolerance]
-                            xdata_g_add = xdata_g_add[diff > tolerance]
+                            # # Remove stationary dynamic predictors
+                            # xdata_near_add = xdata_near_add[:, diff > tolerance]
+                            # xdata_g_add = xdata_g_add[diff > tolerance]
 
                             # Add dynamic predictors
                             if xdata_near_add.size > 0:
@@ -1162,12 +1162,21 @@ def main_regression(config, target):
         else:
             var_name_save = var_name
 
+        # Grid regression
         if estimates.ndim == 3:
             ds_out[var_name_save] = xr.DataArray(estimates, dims=("y", "x", "time"))
             for stat_name in stats:
-                ds_out["reg_" + stat_name] = xr.DataArray(
-                    stats[stat_name], dims=("y", "x", "time", "reg_predictor")
-                )
+                if stats[stat_name].ndim == 4:
+                    ds_out["reg_" + stat_name] = xr.DataArray(
+                        stats[stat_name].squeeze(),
+                        dims=("y", "x", "time", "reg_predictor"),
+                    )
+                elif stats[stat_name].ndim == 3:
+                    ds_out["reg_" + stat_name] = xr.DataArray(
+                        stats[stat_name].squeeze(), dims=("y", "x", "time")
+                    )
+
+        # Station regression
         elif estimates.ndim == 2:
             ds_out[var_name_save] = xr.DataArray(estimates, dims=("stn", "time"))
             for stat_name in stats:
