@@ -7,9 +7,8 @@ import numpy as np
 from scipy import special
 from multiprocessing import Pool
 
-# from data_processing import data_transformation
+from data_processing import data_transformation, calculate_ecdf_cdfs
 import random_field_FortranGMET as rf_FGMET
-# from data_processing import data_transformation, calculate_monthly_cdfs
 
 # ====== subroutines/ functions ======
 
@@ -94,7 +93,7 @@ def prob_estimate_for_one_var(
             reg_estimate[mask] = nearby_stn_max_tmp[mask]
 
             if transform_method == "ecdf":
-                cdfs = calculate_monthly_cdfs(
+                cdfs = calculate_ecdf_cdfs(
                     xr.open_dataset(config["file_allstn"]), var_name, transform_setting
                 )
                 nearby_stn_max = data_transformation(
@@ -133,7 +132,7 @@ def prob_estimate_for_one_var(
         # back transformation
         if len(transform_method) > 0:
             if transform_method == "ecdf":
-                cdfs = calculate_monthly_cdfs(
+                cdfs = calculate_ecdf_cdfs(
                     xr.open_dataset(config["file_allstn"]), var_name, transform_setting
                 )
                 ens_estimate = data_transformation(

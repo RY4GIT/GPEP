@@ -4,7 +4,7 @@ import pandas as pd
 import xarray as xr
 from multiprocessing import Pool
 
-# from data_processing import data_transformation, calculate_monthly_cdfs
+from data_processing import data_transformation, calculate_ecdf_cdfs
 from sklearn import *
 import statsmodels.api as sm
 
@@ -1139,7 +1139,7 @@ def main_regression(config, target):
             else:
                 var_name_save = var_name
                 if "ecdf" in var_name_trans:
-                    cdfs = calculate_monthly_cdfs(
+                    cdfs = calculate_ecdf_cdfs(
                         xr.open_dataset(file_allstn),
                         var_name,
                         transform_settings[transform_vars[vn]],
@@ -1193,13 +1193,15 @@ def main_regression(config, target):
             # evaluation
             dtmp1 = ds_stn[var_name].values
             if (len(var_name_trans) > 0) and (backtransform == False):
+                # Ensemble is done on transformed variable
                 if "ecdf" in var_name_trans:
-                    cdfs = calculate_monthly_cdfs(
+                    # Evaluate using original target variable values even if the regression is done on transformed variable
+                    cdfs = calculate_ecdf_cdfs(
                         xr.open_dataset(file_allstn),
                         var_name,
                         transform_settings[transform_vars[vn]],
                     )
-                    dtmp2 = data_transformation(
+                    _dtmp2 = data_transformation(
                         estimates,
                         transform_vars[vn],
                         transform_settings[transform_vars[vn]],
@@ -1207,13 +1209,15 @@ def main_regression(config, target):
                         times=ds_out["time"].values,
                         cdfs=cdfs,
                     )
+                    dtmp2 = _dtmp2.T
                 else:
-                    dtmp2 = data_transformation(
+                    _dtmp2 = data_transformation(
                         estimates,
                         transform_vars[vn],
                         transform_settings[transform_vars[vn]],
                         "back_transform",
                     )
+                    dtmp2 = _dtmp2.T
             else:
                 dtmp2 = estimates.T
 

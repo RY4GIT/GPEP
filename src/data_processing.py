@@ -9,35 +9,432 @@ from scipy.interpolate import interp1d
 ########################################################################################################################
 # data transformation
 
-# Skipped
+
+def boxcox_transform(data, texp=4):
+    # transform prcp to approximate normal distribution
+    # mode: box-cox; power-law
+    if not isinstance(data, np.ndarray):
+        data = np.array(data)
+    data = data.copy()
+    data[data < 0] = 0
+    datat = (data ** (1 / texp) - 1) / (1 / texp)
+    return datat
 
 
-# def data_transformation(
-#     data, method, settings, mode="transform", times=None, cdfs=None
-# ):
-#     if method == "boxcox":
-#         if mode == "transform":
-#             data = boxcox_transform(data, settings["exponent"])
-#         elif mode == "back_transform":
-#             data = boxcox_back_transform(data, settings["exponent"])
-#         else:
-#             print("Unknown transformation mode: entry=", mode)
-#             sys.exit()
-#     elif method == "ecdf":
-#         if mode == "transform":
-#             data = normal_quantile_transform(data, times, cdfs, settings)
-#             data = data.T
-#         elif mode == "back_transform":
-#             data = inverse_normal_quantile_transform(data, times, cdfs, settings)
-#             if data.ndim == 2:
-#                 data = data.T
-#         else:
-#             print("Unknown transformation mode: entry=", mode)
-#             sys.exit()
-#     else:
-#         print("Unknown transformation method: entry=", method)
-#         sys.exit()
-#     return data
+def boxcox_back_transform(data, texp=4):
+    # transform prcp to approximate normal distribution
+    # mode: box-cox; power-law
+    if not isinstance(data, np.ndarray):
+        data = np.array(data)
+    data = data.copy()
+    data[data < -texp] = -texp
+    datat = (data / texp + 1) ** texp
+    return datat
+
+
+def boxcox_back_transform_biasadjustment(data, sigma_square, texp=4):
+    # Box-Cox back transformation can lead to bias
+    # This function is put here for future use
+    # mode: box-cox; power-law
+    # Reference: https://otexts.com/fpp2/transformations.html
+    data = data.copy()
+    if not isinstance(data, np.ndarray):
+        data = np.array(data)
+    data[data < -texp] = -texp
+    datat = (data / texp + 1) ** texp * (
+        1 + sigma_square * (1 - 1 / texp) / (2 * (data / texp + 1) ** 2)
+    )
+
+    datat[data == -texp] = 0
+
+    return datat
+
+
+def create_cdf_df(data):
+    """Build empirical CDF columns (Value, CDF) from positive finite samples."""
+    valid_data = np.asarray(data).ravel()
+    valid_data = valid_data[np.isfinite(valid_data) & (valid_data > 0)]
+    if valid_data.size == 0:
+        return pd.DataFrame(
+            {"Value": pd.Series(dtype=float), "CDF": pd.Series(dtype=float)}
+        )
+    sorted_data = np.sort(valid_data)
+    cdf_values = np.arange(1, len(sorted_data) + 1) / len(sorted_data)
+    return pd.DataFrame({"Value": sorted_data, "CDF": cdf_values})
+
+
+def calculate_monthly_cdfs(ds, var_name, settings):
+    """Create empirical CDFs stratified by calendar month (1–12)."""
+
+    pooled = settings.get("pooled", True)
+
+    df = pd.DataFrame(data=ds[var_name].T.values, index=pd.to_datetime(ds["time"]))
+
+    if pooled:
+        cdfs = {
+            month: create_cdf_df(df[df.index.month == month].values.flatten())
+            for month in range(1, 13)
+        }
+    else:
+        cdfs = {
+            station: {
+                month: create_cdf_df(df[station][df.index.month == month].dropna())
+                for month in range(1, 13)
+            }
+            for station in df.columns
+        }
+    return cdfs
+
+
+def calculate_global_cdfs(ds, var_name, settings):
+    """Create one empirical CDF over all times (pooled across stations, or per station)."""
+
+    pooled = settings.get("pooled", True)
+
+    df = pd.DataFrame(data=ds[var_name].values, index=pd.to_datetime(ds["time"]))
+
+    if pooled:
+        return create_cdf_df(df.values.flatten())
+    return {
+        station: create_cdf_df(df[station].dropna().values) for station in df.columns
+    }
+
+
+def calculate_ecdf_cdfs(ds, var_name, settings):
+    """Build CDF tables for ECDF transform; monthly vs global is controlled by settings['monthly']."""
+
+    if settings.get("monthly", True):
+        return calculate_monthly_cdfs(ds, var_name, settings)
+    return calculate_global_cdfs(ds, var_name, settings)
+
+
+def normal_quantile_transform_monthly(data, times, monthly_cdfs, settings):
+    """
+    Normal quantile transform using calendar-month empirical CDFs (pooled or per station).
+    """
+
+    # Read settings and if not available, assign default value
+    pooled = settings.get("pooled", True)
+    min_z_value = settings.get("min_z_value", -4)
+
+    df = pd.DataFrame(data=data.T, index=times)
+    transformed_data = pd.DataFrame(
+        index=df.index, columns=(df.columns if pooled else None)
+    )
+
+    # Read all stations that only contain nan values
+    nan_columns = [col for col in df.columns if df[col].isna().all()]
+
+    for month in range(1, 13):
+        for station in df.columns if not pooled else [None]:
+            month_data = (
+                df[station][df.index.month == month]
+                if not pooled
+                else df[df.index.month == month]
+            )
+            month_data = month_data[month_data > 0]
+
+            empirical_cdf = (
+                monthly_cdfs.get(month) if pooled else monthly_cdfs[station][month]
+            )
+
+            if empirical_cdf is not None and not empirical_cdf.empty:
+                cdf_interp = interp1d(
+                    empirical_cdf["Value"], empirical_cdf["CDF"], bounds_error=True
+                )
+                cum_probs = np.clip(cdf_interp(month_data), 0, 0.9999)
+                z_scores = norm.ppf(cum_probs)
+
+                if pooled:
+                    transformed_data.loc[month_data.index, :] = z_scores
+                else:
+                    transformed_data.loc[month_data.index, station] = z_scores
+            else:
+                if pooled:
+                    transformed_data.loc[month_data.index, :] = np.nan
+                else:
+                    transformed_data.loc[month_data.index, station] = np.nan
+
+        transformed_data_array = transformed_data.astype(float).to_numpy()
+
+        # Assign min value to all nan
+        transformed_data_filled = np.nan_to_num(transformed_data_array, nan=min_z_value)
+
+        # Remove stations that had nan from start
+        for col_index, col_name in enumerate(df.columns):
+            if col_name in nan_columns:
+                transformed_data_filled[:, col_index] = np.nan
+
+    return transformed_data_filled
+
+
+def normal_quantile_transform_global(data, times, cdfs, settings):
+    """
+    Normal quantile transform using a single empirical CDF over all time (pooled or per station).
+    """
+
+    pooled = settings.get("pooled", True)
+    min_z_value = settings.get("min_z_value", -4)
+
+    df = pd.DataFrame(data=data, index=pd.to_datetime(times))
+    nan_columns = [col for col in df.columns if df[col].isna().all()]
+
+    transformed_data = pd.DataFrame(index=df.index, columns=df.columns, dtype=float)
+
+    if pooled:
+        empirical_cdf = cdfs
+        if empirical_cdf is not None and not empirical_cdf.empty:
+            cdf_interp = interp1d(
+                empirical_cdf["Value"], empirical_cdf["CDF"], bounds_error=True
+            )
+            for col in df.columns:
+                col_data = df[col]
+                pos = col_data[col_data > 0]
+                if len(pos) > 0:
+                    cum_probs = np.clip(cdf_interp(pos.values), 0, 0.9999)
+                    transformed_data.loc[pos.index, col] = norm.ppf(cum_probs)
+    else:
+        for station in df.columns:
+            empirical_cdf = cdfs[station]
+            col_data = df[station]
+            pos = col_data[col_data > 0]
+            if empirical_cdf is not None and not empirical_cdf.empty and len(pos) > 0:
+                cdf_interp = interp1d(
+                    empirical_cdf["Value"], empirical_cdf["CDF"], bounds_error=True
+                )
+                cum_probs = np.clip(cdf_interp(pos.values), 0, 0.9999)
+                transformed_data.loc[pos.index, station] = norm.ppf(cum_probs)
+
+    transformed_data_array = transformed_data.astype(float).to_numpy()
+    transformed_data_filled = np.nan_to_num(transformed_data_array, nan=min_z_value)
+    for col_index, col_name in enumerate(df.columns):
+        if col_name in nan_columns:
+            transformed_data_filled[:, col_index] = np.nan
+
+    # min_z_value to nan
+    transformed_data_filled[transformed_data_filled <= min_z_value] = np.nan
+
+    return transformed_data_filled
+
+
+def inverse_normal_quantile_transform_monthly(data, time, monthly_cdfs, settings):
+    """
+    Inverse of normal_quantile_transform_monthly.
+    """
+
+    # Read settings value, and if not assign default value
+    pooled = settings.get("pooled", True)
+    interp_method = settings.get("interp_method", "interp1d")
+    min_est_value = settings.get("min_est_value", 0.01)
+
+    if data.ndim == 3:  # Grid regression
+        flattened_data = data.reshape(
+            -1,
+            len(
+                data[
+                    0,
+                    0,
+                ]
+            ),
+        )
+        transformed_data = pd.DataFrame(flattened_data, index=time)
+        back_transformed_data = pd.DataFrame(
+            index=transformed_data.index, columns=transformed_data.columns
+        )
+    elif data.ndim == 2:  # Station regression
+        transformed_data = pd.DataFrame(data, index=time)
+        back_transformed_data = pd.DataFrame(
+            index=transformed_data.index, columns=transformed_data.columns
+        )
+
+    for month in range(1, 13):
+        for station in transformed_data.columns if not pooled else [None]:
+            # Get z scores for each month, and for unpooled approach for each station
+            z_scores = (
+                transformed_data[station][transformed_data.index.month == month]
+                if not pooled
+                else transformed_data[transformed_data.index.month == month]
+            )
+            # Get precomputed ecdf values
+            empirical_cdf = (
+                monthly_cdfs.get(month) if pooled else monthly_cdfs[station][month]
+            )
+
+            if empirical_cdf is not None and not empirical_cdf.empty:
+                if interp_method == "interp1d":
+                    # Use linear interpolation for the inverse transformation
+                    value_interp = interp1d(
+                        empirical_cdf["CDF"],
+                        empirical_cdf["Value"],
+                        kind="linear",
+                        bounds_error=False,
+                        fill_value="extrapolate",
+                    )
+                    # Calculate cumulative probabilities from z scores
+                    z_score_float = z_scores.values.astype(float)
+                    cum_probs = norm.cdf(z_score_float)
+                    # Use linear interpolation to sample from probabilities back to values
+                    original_values = value_interp(cum_probs)
+
+                elif interp_method == "gamma":
+                    # Fit a gamma distribution to the empirical CDF
+                    a, loc, scale = gamma.fit(empirical_cdf["Value"])
+                    # Define the inverse CDF (percent point function) of the fitted gamma distribution
+                    gamma_ppf = lambda cum_probs: gamma.ppf(cum_probs, a, loc, scale)
+                    # Calculate cumulative probabilities from z scores
+                    z_score_float = z_scores.values.astype(float)
+                    cum_probs = norm.cdf(z_score_float)
+                    # Use gamma distribution to sample from probabilities back to values
+                    original_values = gamma_ppf(cum_probs)
+
+                # Filter small values created from filling of nan during first transform
+                original_values[original_values < min_est_value] = np.nan
+                # Convert all nan to zero
+                original_values = np.nan_to_num(original_values)
+
+                if pooled:
+                    back_transformed_data.loc[z_scores.index, :] = original_values
+                else:
+                    back_transformed_data.loc[z_scores.index, station] = original_values
+            else:
+                if pooled:
+                    back_transformed_data.loc[z_scores.index, :] = np.zeros(
+                        len(z_scores)
+                    )
+                else:
+                    back_transformed_data.loc[z_scores.index, station] = np.zeros(
+                        len(z_scores)
+                    )
+
+    # Convert to array
+    back_transform_array = back_transformed_data.astype(float).to_numpy()
+
+    # Extra transform for grid regression
+    if data.ndim == 3:
+        back_transform_array = back_transform_array.T
+        back_transform_array = back_transform_array.reshape(np.shape(data))
+
+    return back_transform_array
+
+
+def inverse_normal_quantile_transform_global(data, time, cdfs, settings):
+    """
+    Inverse of normal_quantile_transform_global.
+    """
+
+    pooled = settings.get("pooled", True)
+    interp_method = settings.get("interp_method", "interp1d")
+    min_est_value = settings.get("min_est_value", 0.01)
+
+    if data.ndim == 3:
+        flattened_data = data.reshape(
+            -1,
+            len(
+                data[
+                    0,
+                    0,
+                ]
+            ),
+        )
+        transformed_data = pd.DataFrame(flattened_data.T, index=pd.to_datetime(time))
+        back_transformed_data = pd.DataFrame(
+            index=transformed_data.index,
+            columns=transformed_data.columns,
+            dtype=float,
+        )
+    elif data.ndim == 2:
+        transformed_data = pd.DataFrame(data.T, index=pd.to_datetime(time))
+        back_transformed_data = pd.DataFrame(
+            index=transformed_data.index,
+            columns=transformed_data.columns,
+            dtype=float,
+        )
+    else:
+        print("inverse_normal_quantile_transform_global: unsupported ndim=", data.ndim)
+        sys.exit()
+
+    def _inverse_from_cdf(z_vals, empirical_cdf):
+        if empirical_cdf is None or empirical_cdf.empty:
+            return np.zeros(len(z_vals))
+        z_score_float = z_vals.values.astype(float)
+        cum_probs = norm.cdf(z_score_float)
+        if interp_method == "interp1d":
+            value_interp = interp1d(
+                empirical_cdf["CDF"],
+                empirical_cdf["Value"],
+                kind="linear",
+                bounds_error=False,
+                fill_value="extrapolate",
+            )
+            original_values = value_interp(cum_probs)
+        elif interp_method == "gamma":
+            a, loc, scale = gamma.fit(empirical_cdf["Value"])
+            original_values = gamma.ppf(cum_probs, a, loc, scale)
+        else:
+            print("Unknown interp_method for ecdf: ", interp_method)
+            sys.exit()
+        original_values = np.asarray(original_values)
+        original_values[original_values < min_est_value] = np.nan
+        return np.nan_to_num(original_values)
+
+    if pooled:
+        empirical_cdf = cdfs
+        for col in transformed_data.columns:
+            z_scores = transformed_data[col]
+            original_values = _inverse_from_cdf(z_scores, empirical_cdf)
+            back_transformed_data.loc[z_scores.index, col] = original_values
+    else:
+        for station in transformed_data.columns:
+            z_scores = transformed_data[station]
+            original_values = _inverse_from_cdf(z_scores, cdfs[station])
+            back_transformed_data.loc[z_scores.index, station] = original_values
+
+    back_transform_array = back_transformed_data.astype(float).to_numpy()
+
+    if data.ndim == 3:
+        back_transform_array = back_transform_array.T
+        back_transform_array = back_transform_array.reshape(np.shape(data))
+
+    return back_transform_array
+
+
+def data_transformation(
+    data, method, settings, mode="transform", times=None, cdfs=None
+):
+    # if method == "boxcox":
+    #     if mode == "transform":
+    #         data = boxcox_transform(data, settings["exponent"])
+    #     elif mode == "back_transform":
+    #         data = boxcox_back_transform(data, settings["exponent"])
+    #     else:
+    #         print("Unknown transformation mode: entry=", mode)
+    #         sys.exit()
+    if method == "ecdf":
+        monthly = settings.get("monthly", True)
+        if mode == "transform":
+            if monthly:
+                data = normal_quantile_transform_monthly(data, times, cdfs, settings)
+            else:
+                data = normal_quantile_transform_global(data, times, cdfs, settings)
+
+        elif mode == "back_transform":
+            if monthly:
+                data = inverse_normal_quantile_transform_monthly(
+                    data, times, cdfs, settings
+                )
+            else:
+                data = inverse_normal_quantile_transform_global(
+                    data, times, cdfs, settings
+                )
+            if data.ndim == 2:
+                data = data.T
+        else:
+            print("Unknown transformation mode: entry=", mode)
+            sys.exit()
+    else:
+        print("Unknown transformation method: entry=", method)
+        sys.exit()
+    return data
 
 
 ########################################################################################################################
@@ -298,39 +695,39 @@ def merge_stndata_into_single_file(config):
     for var in target_vars:
         ds_stn = ds_stn.drop_vars([var + "_avail_stn"])
 
-    # # transform variables
-    # print("Transform variables if relevant settings are provided")
-    # for i in range(len(transform_vars)):
-    #     if len(transform_vars[i]) > 0:
-    #         tvar = target_vars[i] + "_" + transform_vars[i]
-    #         print(
-    #             f"Perform {transform_vars[i]} transformation for {target_vars[i]}. Add a new variable {tvar} to output station file."
-    #         )
-    #         if tvar in ds_stn:
-    #             print(f"{tvar} exists in ds_stn. no need to perform transformation")
-    #             continue
-    #         ds_stn[tvar] = ds_stn[vari].copy()
-    #         if transform_vars[i] == "ecdf":
-    #             cdfs = calculate_monthly_cdfs(
-    #                 ds_stn, target_vars[i], transform_settings[transform_vars[i]]
-    #             )
-    #             ds_stn[tvar].values = data_transformation(
-    #                 ds_stn[target_vars[i]].values,
-    #                 transform_vars[i],
-    #                 transform_settings[transform_vars[i]],
-    #                 "transform",
-    #                 times=ds_stn["time"].values,
-    #                 cdfs=cdfs,
-    #             )
-    #         else:
-    #             ds_stn[tvar].values = data_transformation(
-    #                 ds_stn[target_vars[i]].values,
-    #                 transform_vars[i],
-    #                 transform_settings[transform_vars[i]],
-    #                 "transform",
-    #             )
-    #     else:
-    #         print(f"Do not perform transformation for {target_vars[i]}")
+    # transform variables
+    print("Transform variables if relevant settings are provided")
+    for i in range(len(transform_vars)):
+        if len(transform_vars[i]) > 0:
+            tvar = target_vars[i] + "_" + transform_vars[i]
+            print(
+                f"Perform {transform_vars[i]} transformation for {target_vars[i]}. Add a new variable {tvar} to output station file."
+            )
+            if tvar in ds_stn:
+                print(f"{tvar} exists in ds_stn. no need to perform transformation")
+                continue
+            ds_stn[tvar] = ds_stn[target_vars[i]].copy()
+            if transform_vars[i] == "ecdf":
+                cdfs = calculate_ecdf_cdfs(
+                    ds_stn, target_vars[i], transform_settings[transform_vars[i]]
+                )
+                ds_stn[tvar].values = data_transformation(
+                    ds_stn[target_vars[i]].values,
+                    transform_vars[i],
+                    transform_settings[transform_vars[i]],
+                    "transform",
+                    times=ds_stn["time"].values,
+                    cdfs=cdfs,
+                )
+            else:
+                ds_stn[tvar].values = data_transformation(
+                    ds_stn[target_vars[i]].values,
+                    transform_vars[i],
+                    transform_settings[transform_vars[i]],
+                    "transform",
+                )
+        else:
+            print(f"Do not perform transformation for {target_vars[i]}")
 
     ########################################################################################################################
     # Save to output files

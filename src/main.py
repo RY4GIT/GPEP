@@ -27,22 +27,27 @@ if __name__ == "__main__":
 
     ########################################################################################################################
     # assemble individual stations and station attributes (e.g., lat, lon) to one netcdf file
+    # See "data_processing.py" for more details
     config = data_processing.merge_stndata_into_single_file(config)
 
     ########################################################################################################################
     # get near station info for each station/grid
+    # See "near_stn_search.py" for more details
     config = near_stn_search.get_near_station_info(config)
 
     ########################################################################################################################
     # calculate weights based on near station info. this step is independent to enable flexible weight test if needed.
+    # See "weight_calculation.py" for more details
     config = weight_calculation.calculate_weight_using_nearstn_info(config)
 
     ########################################################################################################################
     # perform regression
     # (1) estimate predictive uncertainty using cross-validated (i.e., leave one out, LOO) regression at station points
+    # See "regression.py" for more details
     config = regression.main_regression(config, "cval")
 
     # (2) estimate regression coefficients at all grid points
+    # See "regression.py" for more details
     config = regression.main_regression(config, "grid")
 
     ########################################################################################################################
