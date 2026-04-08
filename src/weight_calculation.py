@@ -1,11 +1,14 @@
-import os, sys, time
+import os, time
 import xarray as xr
 import numpy as np
+from tqdm import tqdm
 
-def distanceweight(dist, maxdist = 100, exp = 3):
+
+def distanceweight(dist, maxdist=100, exp=3):
     weight = (1 - (dist / maxdist) ** exp) ** exp
     weight[weight < 0] = 0
     return weight
+
 
 def distanceweight_userdefined(dist, maxdist, weight_formula):
     weight = eval(weight_formula)
@@ -13,83 +16,87 @@ def distanceweight_userdefined(dist, maxdist, weight_formula):
     return weight
 
 
-def calculate_weights_from_distance(nearDistance, initial_distance=100, exp=3, formula=''):
+def calculate_weights_from_distance(
+    nearDistance, initial_distance=100, exp=3, formula=""
+):
     # calculate weights
 
-    if nearDistance.ndim == 2:
-        nstn = nearDistance.shape[0]
-        nearWeight = np.nan * np.ones([nstn, nearDistance.shape[1]], dtype=np.float32)
-        for i in range(nstn):
-            disti = nearDistance[i, :]
-            if disti[0] >= 0:
-                disti = disti[disti>=0]
-                max_dist = np.max([initial_distance, np.max(disti) + 1])
-                if len(formula) == 0:
-                    nearWeight[i, 0:len(disti)] = distanceweight(disti, max_dist, exp)
-                else:
-                    nearWeight[i, 0:len(disti)] = distanceweight_userdefined(disti, max_dist, formula)
+    # Handle 1D input (single location)
+    if nearDistance.ndim == 1:
+        # Prepare
+        nearWeight = np.full_like(nearDistance, np.nan, dtype=np.float32)
+        valid = np.isfinite(nearDistance) & (nearDistance >= 0)
+        if not np.any(valid):
+            return nearWeight
+        nearDistance_valid = nearDistance[valid]
+        max_dist = np.max([initial_distance, np.max(nearDistance_valid) + 1])
 
-    elif nearDistance.ndim == 3:
-        nrow = nearDistance.shape[0]
-        ncol = nearDistance.shape[1]
-        nearWeight = np.nan * np.ones([nrow, ncol, nearDistance.shape[2]], dtype=np.float32)
-        for i in range(nrow):
-            for j in range(ncol):
-                distij = nearDistance[i, j, :]
-                if distij[0] >= 0:
-                    distij   = distij[distij>=0]
-                    max_dist = np.max([initial_distance, np.max(distij) + 1])
-                    if len(formula) == 0:
-                        nearWeight[i, j, 0:len(distij)] = distanceweight(distij, max_dist, exp)
-                    else:
-                        nearWeight[i, j, 0:len(distij)] = distanceweight_userdefined(distij, max_dist, formula)
+        # Calculate weights
+        if len(formula) == 0:
+            nearWeight[valid] = distanceweight(nearDistance_valid, max_dist, exp)
+        else:
+            nearWeight[valid] = distanceweight_userdefined(
+                nearDistance_valid, max_dist, formula
+            )
+        return nearWeight
 
     else:
-        sys.exit('Error! nearDistance must have ndim 2 or 3.')
+        print("Error: nearDistance must be 1D or 2D")
+        return None
 
-    return nearWeight
 
 def calculate_weight_using_nearstn_info(config):
+    """
+    This is the main function of this module.
+
+    This module is used to calculate weights based on near station info.
+
+    """
 
     t1 = time.time()
 
     # parse and change configurations
-    path_stn_info      = config['path_stn_info']
-    file_stn_weight    = f"{path_stn_info}/all_stn_weight.nc"
-    config['file_stn_weight'] = file_stn_weight
+    path_stn_info = config["path_stn_info"]
+    file_stn_weight = f"{path_stn_info}/all_stn_weight.nc"
+    config["file_stn_weight"] = file_stn_weight
 
     # in/out information to this function
-    file_stn_nearinfo  = config['file_stn_nearinfo']
-    file_stn_weight    = config['file_stn_weight']
-    initial_distance   = config['initial_distance']
+    file_stn_nearinfo = config["file_stn_nearinfo"]
+    file_stn_weight = config["file_stn_weight"]
+    initial_distance = config["initial_distance"]
 
-    if 'weight_formula' in config:
-        weight_formula = config['weight_formula']
+    if "weight_formula" in config:
+        weight_formula = config["weight_formula"]
     else:
-        weight_formula = ''
+        weight_formula = ""
 
-    if 'overwrite_weight' in config:
-        overwrite_weight = config['overwrite_weight']
+    if "overwrite_weight" in config:
+        overwrite_weight = config["overwrite_weight"]
     else:
         overwrite_weight = False
 
     # default settings
-    keyword = 'nearDistance' # defined in near station search
-    keywords_drop = ['nearDistance', 'nearIndex']
-    truncation_dist = np.inf # stations beyond this distance have zero weights. this is not activated for now
+    keyword = "nearDistance"  # defined in near station search
+    keywords_drop = [
+        "nearDistance",
+        "nearIndex",
+    ]  # TODO: why do I wet drop this variable? For later?
+    truncation_dist = (
+        np.inf
+    )  # stations beyond this distance have zero weights. this is not activated for now
 
-    print('#' * 50)
-    print('Calculate weights for near stations')
-    print('#' * 50)
-    print('input file_stn_nearinfo:', file_stn_nearinfo)
-    print('output file_stn_weight: ', file_stn_weight)
+    print("#" * 50)
+    print("Calculate weights for near stations")
+    print("#" * 50)
+    print("input file_stn_nearinfo:", file_stn_nearinfo)
+    print("output file_stn_weight: ", file_stn_weight)
 
     if os.path.isfile(file_stn_weight):
-        print('Note! Weight file exists')
+        print("Note! Weight file exists")
         if overwrite_weight == True:
-            print('overwrite_weight is True. Continue.')
+            print("overwrite_weight is True. Continue.")
         else:
-            print('overwrite_weight is False. Skip weight calculation.\n')
+            print("overwrite_weight is False. Skip weight calculation.\n")
             return config
 
     ########################################################################################################################
@@ -98,11 +105,59 @@ def calculate_weight_using_nearstn_info(config):
 
     for var in ds_inout.data_vars:
         if keyword in var:
-            print('Processing:', var)
+            print("Processing:", var)
             nearDistance = ds_inout[var].values
-            nearWeight   = calculate_weights_from_distance(nearDistance, initial_distance, 3, weight_formula)
+            dims = ds_inout[var].dims
+
+            # Determine the structure and calculate weights accordingly
+            if "Grid" in var:
+                # Grid variables: (stn_combo, y, x, near)
+                print(f"  Dimensions: {dims} - Processing as Grid data")
+                n_combo, nrow, ncol, n_near = (
+                    nearDistance.shape
+                )  # ('stn_combo_sm', 'y', 'x', 'near')
+                nearWeight = np.nan * np.ones(
+                    [n_combo, nrow, ncol, n_near], dtype=np.float32
+                )
+
+                for combo in tqdm(range(n_combo), desc="Processing combos"):
+                    for i in range(nrow):
+                        for j in range(ncol):
+                            nearWeight[combo, i, j, :] = (
+                                calculate_weights_from_distance(
+                                    nearDistance[combo, i, j, :],
+                                    initial_distance,
+                                    3,
+                                    weight_formula,
+                                )
+                            )
+
+            elif "InStn" in var:
+                # Station variables: (stn_combo, stn, near)
+                print(f"  Dimensions: {dims} - Processing as Station data")
+                n_combo, nstn, n_near = nearDistance.shape
+                nearWeight = np.nan * np.ones([n_combo, nstn, n_near], dtype=np.float32)
+
+                for combo in tqdm(range(n_combo), desc="Processing combos"):
+                    for s in range(nstn):
+                        nearWeight[combo, s, :] = calculate_weights_from_distance(
+                            nearDistance[combo, s, :],
+                            initial_distance,
+                            3,
+                            weight_formula,
+                        )
+
+            else:
+                print(f"  WARNING: Unknown variable type for {var}, skipping")
+                continue
+
+            # Apply truncation distance
             nearWeight[nearDistance > truncation_dist] = 0
-            ds_inout[var.replace(keyword, 'nearWeight')] = xr.DataArray(nearWeight, dims=ds_inout[var].dims)
+
+            # Add to dataset
+            ds_inout[var.replace(keyword, "nearWeight")] = xr.DataArray(
+                nearWeight, dims=dims
+            )
 
     # drop some vars
     for var in ds_inout.data_vars:
@@ -112,11 +167,11 @@ def calculate_weight_using_nearstn_info(config):
     # save to output files
     encoding = {}
     for var in ds_inout.data_vars:
-        encoding[var] = {'zlib': True, 'complevel': 4}
+        encoding[var] = {"zlib": True, "complevel": 4}
     ds_inout.to_netcdf(file_stn_weight, encoding=encoding)
 
     t2 = time.time()
-    print('Time cost (s):', t2 - t1)
-    print('Weight calculation completed successfully!\n\n')
+    print("Time cost (s):", t2 - t1)
+    print("Weight calculation completed successfully!\n\n")
 
     return config

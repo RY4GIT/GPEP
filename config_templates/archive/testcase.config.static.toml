@@ -96,9 +96,12 @@ ensemble_end = 5
 linkvar = [ ['prcp', 'trange'], ]
 
 # variable correlations. They are all optional
-clen = [150, 800, 800] # corresponding to target_vars
-lag1_auto_cc = [-9999, -9999, -9999] # corresponding to target_vars
-cross_cc = [-9999] # corresponding to linkvar
+clen = [150, 800, 800] 
+# corresponding to target_vars
+lag1_auto_cc = [-9999, -9999, -9999] 
+# corresponding to target_vars
+cross_cc = [-9999] 
+# corresponding to linkvar
 
 # direct: using raw time series to calculate autocorrelation; anomaly: using the anomaly of time series to calculate autocorrelation
 auto_corr_method = ['direct', 'anomaly', 'anomaly'] # corresponding to target_vars

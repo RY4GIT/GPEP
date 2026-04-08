@@ -1,0 +1,93 @@
+# configuration file used to run GPEP
+
+########################################################################################################################
+# general settings
+########################################################################################################################
+
+# case name
+case_name = 'AZWGstatic'
+
+# worker number (cpu cores)
+num_processes = 5
+
+# model setting file
+modelsettings_file = "model.settings.toml"
+
+########################################################################################################################
+# settings for gridded estimation using regression or machine learning methods
+########################################################################################################################
+
+############################## input/output files
+
+# the input station file list (with attributes) and input station path
+input_stn_list = "G:/Shared drives/Ryoko and Hilary/q-field/data/stac_data/AZWG/gpep_site_metadata.csv"
+input_stn_path = "G:/Shared drives/Ryoko and Hilary/q-field/data/USDA_ARS/AZWG/preprocessed"
+
+# domain gridded static attributes (e.g., dem, lon, lat, slope)
+infile_grid_domain = "G:/Shared drives/Ryoko and Hilary/q-field/data/stac_data/AZWG/gpep_input_static.nc"
+
+# parent output path
+outpath_parent = "G:/Shared drives/Ryoko and Hilary/q-field/out/gpep/AZWG"
+
+############################## target variables and periods
+# target period
+date_start = "2017-08-10"
+date_end = "2017-09-02"
+
+# soil moisture sensor depth
+sensor_depth_cm = 5
+
+# input/output variables
+input_vars = ['sm'] # variables in the raw station files
+target_vars = ['sm'] # target output variables
+
+# target variables that need occurrence probability estimation
+target_vars_WithProbability = []
+probability_thresholds = []
+
+# input variables conversion to get target variables
+mapping_InOut_var = []
+
+# min/max limit or transformation
+minRange_vars = [0]
+maxRange_vars = [1.0]
+
+
+############################## static/dynamic predictors used in regression
+# static predictors in input_stn_list or input_stn_all
+predictor_name_static_stn = ['PercSand', 'PercSilt', 'PercClay', 'elev_m','northness', 'eastness', 'slope_m', 'slope_n', 'slope_e', 'twi']
+
+# dynamic predictors in infile_grid_domain
+predictor_name_static_grid = ['PercSand', 'PercSilt', 'PercClay', 'elev_m','northness', 'eastness', 'slope_m', 'slope_n', 'slope_e', 'twi']
+
+########################################################################################################################
+# settings for probabilistic estimation
+########################################################################################################################
+
+# run ensemble or not: true or false
+ensemble_flag = true
+
+# ensemble settings
+ensemble_start = 1
+ensemble_end = 5
+
+# link variables for random number generation dependence
+linkvar = []
+
+# variable correlations. They are all optional
+# TODO: check later
+clen = [150] 
+# corresponding to target_vars
+lag1_auto_cc = [-9999] 
+# corresponding to target_vars
+cross_cc = [] 
+# corresponding to linkvar
+
+# direct: using raw time series to calculate autocorrelation; anomaly: using the anomaly of time series to calculate autocorrelation
+auto_corr_method = ['direct'] # corresponding to target_vars
+
+# only effective for auto_corr_method=anomaly. rolling mean window size, which is used for variable lag auto correlation calculation
+rolling_window = 24 # 24-hourly 
+
+# nearby max constraint
+target_vars_max_constrain = ['sm']

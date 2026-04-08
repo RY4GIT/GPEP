@@ -1,0 +1,106 @@
+# configuration file used to run GPEP
+
+########################################################################################################################
+# general settings
+########################################################################################################################
+
+# case name
+case_name = 'GALRdynamic'
+
+# worker number (cpu cores)
+num_processes = 5
+
+# model setting file
+modelsettings_file = "model.settings.toml"
+
+########################################################################################################################
+# settings for gridded estimation using regression or machine learning methods
+########################################################################################################################
+
+############################## input/output files
+
+# the input station file list (with attributes) and input station path
+input_stn_list = "G:/Shared drives/Ryoko and Hilary/q-field/data/stac_data/GALR/gpep_site_metadata.csv"
+input_stn_path = "G:/Shared drives/Ryoko and Hilary/q-field/data/USDA_ARS/GALR/preprocessed"
+
+# domain gridded static attributes (e.g., dem, lon, lat, slope)
+infile_grid_domain = "G:/Shared drives/Ryoko and Hilary/q-field/data/stac_data/GALR/gpep_input_static.nc"
+
+# parent output path
+outpath_parent = "G:/Shared drives/Ryoko and Hilary/q-field/out/gpep/GALR"
+
+############################## target variables and periods
+# target period
+date_start = "2017-08-10"
+date_end = "2017-09-02"
+
+# soil moisture sensor depth
+sensor_depth_cm = "02in"
+
+# input/output variables
+input_vars = ['sm'] # variables in the raw station files
+target_vars = ['sm'] # target output variables
+
+# target variables that need occurrence probability estimation
+target_vars_WithProbability = []
+probability_thresholds = []
+
+# input variables conversion to get target variables
+mapping_InOut_var = []
+
+# min/max limit or transformation
+minRange_vars = [0.0]
+maxRange_vars = [1.0]
+
+
+############################## dynamic predictors for regression
+# only useful when dynamic_predictor_filelist is valid
+
+# file list containing dynamic predictor inputs (optional). Give it a nonsense string (e.g., "NA") can turn off dynamic predictors
+dynamic_predictor_filelist = "G:/Shared drives/Ryoko and Hilary/q-field/data/stac_data/GALR/gpep_dynamic_data_list.txt"
+
+# dynamic predictors for each target_vars. Empty list means no dynamic predictors
+dynamic_predictor_name = [['Lai_500m_filled', 'srad', 'vp']]
+
+# dynamic predictors may needs some processing. two keywords: "interp" an "transform"
+# Example "cube_root_prec_rate:interp=linear:transform=boxcox"
+dynamic_predictor_operation = []
+
+############################## static/dynamic predictors used in regression
+# static predictors in input_stn_list or input_stn_all
+predictor_name_static_stn = ['PercSand', 'PercSilt', 'PercClay', 'elev_m','northness', 'eastness', 'slope_m']
+
+# dynamic predictors in infile_grid_domain
+predictor_name_static_grid = ['PercSand', 'PercSilt', 'PercClay', 'elev_m','northness', 'eastness', 'slope_m']
+
+########################################################################################################################
+# settings for probabilistic estimation
+########################################################################################################################
+
+# run ensemble or not: true or false
+ensemble_flag = true
+
+# ensemble settings
+ensemble_start = 1
+ensemble_end = 5
+
+# link variables for random number generation dependence
+linkvar = []
+
+# variable correlations. They are all optional
+# TODO: check later
+clen = [150] 
+# corresponding to target_vars
+lag1_auto_cc = [-9999] 
+# corresponding to target_vars
+cross_cc = [] 
+# corresponding to linkvar
+
+# direct: using raw time series to calculate autocorrelation; anomaly: using the anomaly of time series to calculate autocorrelation
+auto_corr_method = ['direct'] # corresponding to target_vars
+
+# only effective for auto_corr_method=anomaly. rolling mean window size, which is used for variable lag auto correlation calculation
+rolling_window = 24 # 24-hourly 
+
+# nearby max constraint
+target_vars_max_constrain = ['sm']

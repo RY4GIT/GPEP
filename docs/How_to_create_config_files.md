@@ -412,7 +412,7 @@ If set to `true`, all configurations will be printed at the beginning of model p
 
 ### overwrite flags
 **overwrite_stninfo**: Files related integrated station inputs and nearby information
-**overwrite_station_cc**: For the station correlation file  
+**overwrite_station_cc**: For the station space-time correlation file  
 **overwrite_weight**: For station weight file  
 **overwrite_cv_reg**: For station-based cross validation file  
 **overwrite_grid_reg**: For gridded regression file  
