@@ -68,7 +68,7 @@ def calculate_monthly_cdfs(ds, var_name, settings):
 
     pooled = settings.get("pooled", True)
 
-    df = pd.DataFrame(data=ds[var_name].T.values, index=pd.to_datetime(ds["time"]))
+    df = pd.DataFrame(data=ds[var_name].values, index=pd.to_datetime(ds["time"]))
 
     if pooled:
         cdfs = {
@@ -117,7 +117,7 @@ def normal_quantile_transform_monthly(data, times, monthly_cdfs, settings):
     pooled = settings.get("pooled", True)
     min_z_value = settings.get("min_z_value", -4)
 
-    df = pd.DataFrame(data=data.T, index=times)
+    df = pd.DataFrame(data=data, index=times)
     transformed_data = pd.DataFrame(
         index=df.index, columns=(df.columns if pooled else None)
     )
@@ -237,12 +237,12 @@ def inverse_normal_quantile_transform_monthly(data, time, monthly_cdfs, settings
                 ]
             ),
         )
-        transformed_data = pd.DataFrame(flattened_data, index=time)
+        transformed_data = pd.DataFrame(flattened_data.T, index=time)
         back_transformed_data = pd.DataFrame(
             index=transformed_data.index, columns=transformed_data.columns
         )
     elif data.ndim == 2:  # Station regression
-        transformed_data = pd.DataFrame(data, index=time)
+        transformed_data = pd.DataFrame(data.T, index=time)
         back_transformed_data = pd.DataFrame(
             index=transformed_data.index, columns=transformed_data.columns
         )
@@ -250,15 +250,18 @@ def inverse_normal_quantile_transform_monthly(data, time, monthly_cdfs, settings
     for month in range(1, 13):
         for station in transformed_data.columns if not pooled else [None]:
             # Get z scores for each month, and for unpooled approach for each station
+
             z_scores = (
                 transformed_data[station][transformed_data.index.month == month]
                 if not pooled
                 else transformed_data[transformed_data.index.month == month]
             )
+
             # Get precomputed ecdf values
-            empirical_cdf = (
-                monthly_cdfs.get(month) if pooled else monthly_cdfs[station][month]
-            )
+            if pooled:
+                empirical_cdf = monthly_cdfs.get(month)
+            else:
+                empirical_cdf = monthly_cdfs[station][month]
 
             if empirical_cdf is not None and not empirical_cdf.empty:
                 if interp_method == "interp1d":
@@ -306,12 +309,11 @@ def inverse_normal_quantile_transform_monthly(data, time, monthly_cdfs, settings
                         len(z_scores)
                     )
 
-    # Convert to array
-    back_transform_array = back_transformed_data.astype(float).to_numpy()
-
-    # Extra transform for grid regression
+    # DataFrame is (ntime, nspatial); transpose to (nspatial, ntime) to match
+    # forward flatten: data.reshape(-1, ntime) with columns = time.
+    _back_transform_array = back_transformed_data.astype(float).to_numpy()
+    back_transform_array = _back_transform_array.T
     if data.ndim == 3:
-        back_transform_array = back_transform_array.T
         back_transform_array = back_transform_array.reshape(np.shape(data))
 
     return back_transform_array
@@ -343,7 +345,7 @@ def inverse_normal_quantile_transform_global(data, time, cdfs, settings):
             dtype=float,
         )
     elif data.ndim == 2:
-        transformed_data = pd.DataFrame(data.T, index=pd.to_datetime(time))
+        transformed_data = pd.DataFrame(data, index=pd.to_datetime(time))
         back_transformed_data = pd.DataFrame(
             index=transformed_data.index,
             columns=transformed_data.columns,
@@ -386,14 +388,24 @@ def inverse_normal_quantile_transform_global(data, time, cdfs, settings):
     else:
         for station in transformed_data.columns:
             z_scores = transformed_data[station]
-            original_values = _inverse_from_cdf(z_scores, cdfs[station])
-            back_transformed_data.loc[z_scores.index, station] = original_values
+            try:
+                original_values = _inverse_from_cdf(z_scores, cdfs[station])
+                back_transformed_data.loc[z_scores.index, station] = original_values
+            except:
+                print(
+                    "Error in inverse_normal_quantile_transform_global for station:",
+                    station,
+                )
 
     back_transform_array = back_transformed_data.astype(float).to_numpy()
 
     if data.ndim == 3:
-        back_transform_array = back_transform_array.T
-        back_transform_array = back_transform_array.reshape(np.shape(data))
+        # The back_transformed_data DataFrame has shape (ntime, nstations), and data has shape (nrow, ncol, ntime)
+        # Flatten the 3D data to (nrow*ncol, ntime), process, then reshape back to (nrow, ncol, ntime)
+        nrow, ncol, ntime = data.shape
+        # back_transform_array at this point is (ntime, nrow*ncol) due to .T in DataFrame creation
+        # Transpose back to (nrow*ncol, ntime), then reshape to (nrow, ncol, ntime)
+        back_transform_array = back_transform_array.T.reshape(nrow, ncol, ntime)
 
     return back_transform_array
 
@@ -427,7 +439,8 @@ def data_transformation(
                     data, times, cdfs, settings
                 )
             if data.ndim == 2:
-                data = data.T
+                None
+                # data = data.T
         else:
             print("Unknown transformation mode: entry=", mode)
             sys.exit()

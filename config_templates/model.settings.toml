@@ -60,10 +60,10 @@ transform = "ecdf"
 exponent = 4
 
 [transform.ecdf]
-pooled = false
+pooled = true
 min_z_value = -4.0
 interp_method = "interp1d"
-monthly = false
+monthly = true
 
 [sklearn]
 # if no parameters are provided or if the section does not even exist, default parameters will be used.
@@ -89,7 +89,7 @@ print_config = false
 ###### STATION / DATA ######
 
 # **overwrite_merged_stnfile**: Merge multiple input data files
-overwrite_merged_stnfile = false
+overwrite_merged_stnfile = true
 
 # **overwrite_stninfo**: Files related integrated station inputs and nearby information
 overwrite_stninfo = false 
@@ -99,10 +99,10 @@ overwrite_weight = false
 
 ###### REGRESSION ######
 # **overwrite_cv_reg**: For station-based regression cross validation file
-overwrite_stn_cv_reg = true
+overwrite_stn_cv_reg = false
 
 # **overwrite_grid_reg**: For gridded regression file  
-overwrite_grid_reg = true
+overwrite_grid_reg = false
 
 ###### SCRF ######
 # **overwrite_spcorr**: For spatial correlation structure files  
@@ -110,7 +110,7 @@ overwrite_grid_reg = true
 overwrite_spcorr = false
 
 # **overwrite_station_cc**: For the station space-time correlation file  
-overwrite_station_cc = true
+overwrite_station_cc = false
 
 ###### ENSEMBLE ######
 

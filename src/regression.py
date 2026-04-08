@@ -903,11 +903,11 @@ def main_regression(config, target):
     # loop variables
     for vn in range(len(target_vars)):
         var_name = target_vars[vn]
-        print("Regression for:", var_name)
 
         # transformed or not
         if len(transform_vars[vn]) > 0:
             var_name_trans = var_name + "_" + transform_vars[vn]
+            print("Regression for transformed variable:", var_name_trans)
             print(f"Variable {var_name} is transformed using {transform_vars[vn]}")
             print(
                 f"{var_name_trans} instead of {var_name} will be loaded from the station data file {file_allstn}."
@@ -930,6 +930,7 @@ def main_regression(config, target):
             #     )
 
         else:
+            print("Regression for original variable:", var_name)
             var_name_trans = ""
 
         ########################################################################################################################
@@ -1083,9 +1084,11 @@ def main_regression(config, target):
         if gridcore_continuous.startswith("LWR:"):
             # Transform max limit if necessary
             if var_name in target_vars_max_constrain:
-                print("Perform max constraint for ", var_name, ": ", target)
-
                 if len(transform_vars[vn]) > 0:
+                    print(
+                        "Perform max constraint for transformed variable:",
+                        var_name_trans,
+                    )
                     maxlimit = {
                         "flag": True,
                         "method": transform_vars[vn],
@@ -1094,9 +1097,14 @@ def main_regression(config, target):
                 else:
                     maxlimit = {"flag": True}
             else:
+                print("Perform max constraint for ", var_name, ": ", target)
                 maxlimit = {"flag": False}
 
-            print("Perform regression for ", var_name)
+            if len(var_name_trans) > 0:
+                print("Perform regression for transformed variable:", var_name_trans)
+            else:
+                print("Perform regression for original variable:", var_name)
+
             # Get estimates via regression
             estimates, stats = loop_regression(
                 stn_value,

@@ -84,79 +84,83 @@ def prob_estimate_for_one_var(
 ):
     # calculate max limit
     if np.array(nearby_stn_max).shape == reg_estimate.shape:
-        if len(transform_method) > 0:
-            precip_err_cap = 0.2  # hard coded ...
-            nearby_stn_max_tmp = nearby_stn_max + reg_error * precip_err_cap
+        # if len(transform_method) > 0:
+        #     precip_err_cap = 0.2  # hard coded ...
+        #     nearby_stn_max_tmp = nearby_stn_max + reg_error * precip_err_cap
 
-            # perform max limit to regression estimates which should already be transformed
-            mask = reg_estimate > nearby_stn_max_tmp
-            reg_estimate[mask] = nearby_stn_max_tmp[mask]
+        #     # perform max limit to regression estimates which should already be transformed
+        #     mask = reg_estimate > nearby_stn_max_tmp
+        #     reg_estimate[mask] = nearby_stn_max_tmp[mask]
 
-            if transform_method == "ecdf":
-                cdfs = calculate_ecdf_cdfs(
-                    xr.open_dataset(config["file_allstn"]), var_name, transform_setting
-                )
-                nearby_stn_max = data_transformation(
-                    nearby_stn_max_tmp,
-                    transform_method,
-                    transform_setting,
-                    "back_transform",
-                    times=times,
-                    cdfs=cdfs,
-                )
-            else:
-                nearby_stn_max = data_transformation(
-                    nearby_stn_max_tmp,
-                    transform_method,
-                    transform_setting,
-                    "back_transform",
-                )
-        else:
-            nearby_stn_max = nearby_stn_max + reg_error * 2
+        #     # if transform_method == "ecdf":
+        #     # No way to match ...
+        #     #     cdfs = calculate_ecdf_cdfs(
+        #     #         xr.open_dataset(config["file_allstn"]), var_name, transform_setting
+        #     #     )
+        #     #     nearby_stn_max = data_transformation(
+        #     #         nearby_stn_max_tmp,
+        #     #         transform_method,
+        #     #         transform_setting,
+        #     #         "back_transform",
+        #     #         times=times,
+        #     #         cdfs=cdfs,
+        #     #     )
+        #     # else:
+        #     #     nearby_stn_max = data_transformation(
+        #     #         nearby_stn_max_tmp,
+        #     #         transform_method,
+        #     #         transform_setting,
+        #     #         "back_transform",
+        #     #     )
+        # else:
+        nearby_stn_max = nearby_stn_max + reg_error * 2
 
-            # perform max limit to regression estimates
-            mask = reg_estimate > nearby_stn_max
-            reg_estimate[mask] = nearby_stn_max[mask]
+        # perform max limit to regression estimates
+        mask = reg_estimate > nearby_stn_max
+        reg_estimate[mask] = nearby_stn_max[mask]
 
         maxlflag = True
     else:
         maxlflag = False
 
-    # generate probabilistic estimates
+    # # generate probabilistic estimates
+    ens_estimate = None
     if poe.shape == reg_estimate.shape:
-        ens_estimate, index_positive, index_nonpositive = (
-            perturb_estimates_withoccurrence(
-                reg_estimate, reg_error, poe, random_field, minrndnum, maxrndnum
-            )
-        )
-        # back transformation
-        if len(transform_method) > 0:
-            if transform_method == "ecdf":
-                cdfs = calculate_ecdf_cdfs(
-                    xr.open_dataset(config["file_allstn"]), var_name, transform_setting
-                )
-                ens_estimate = data_transformation(
-                    ens_estimate,
-                    transform_method,
-                    transform_setting,
-                    "back_transform",
-                    times=times,
-                    cdfs=cdfs,
-                )
-            else:
-                ens_estimate = data_transformation(
-                    ens_estimate, transform_method, transform_setting, "back_transform"
-                )
+        # Skip for now
+        None
+    #     ens_estimate, index_positive, index_nonpositive = (
+    #         perturb_estimates_withoccurrence(
+    #             reg_estimate, reg_error, poe, random_field, minrndnum, maxrndnum
+    #         )
+    #     )
+    #     # back transformation
+    #     if len(transform_method) > 0:
+    #         if transform_method == "ecdf":
+    #             cdfs = calculate_ecdf_cdfs(
+    #                 xr.open_dataset(config["file_allstn"]), var_name, transform_setting
+    #             )
+    #             ens_estimate = data_transformation(
+    #                 ens_estimate,
+    #                 transform_method,
+    #                 transform_setting,
+    #                 "back_transform",
+    #                 times=times,
+    #                 cdfs=cdfs,
+    #             )
+    #         else:
+    #             ens_estimate = data_transformation(
+    #                 ens_estimate, transform_method, transform_setting, "back_transform"
+    #             )
 
-            zerovalue = 0  # assume 0 is non-event value
-            ens_estimate[index_nonpositive] = zerovalue
+    #         zerovalue = 0  # assume 0 is non-event value
+    #         ens_estimate[index_nonpositive] = zerovalue
 
-            minpost = (
-                0.1  # assume 0.1 is the minimum positive values when an event occurs
-            )
-            dtmp = ens_estimate[index_positive]
-            dtmp[dtmp < minpost] = minpost
-            ens_estimate[index_positive] = dtmp
+    #         minpost = (
+    #             0.1  # assume 0.1 is the minimum positive values when an event occurs
+    #         )
+    #         dtmp = ens_estimate[index_positive]
+    #         dtmp[dtmp < minpost] = minpost
+    #         ens_estimate[index_positive] = dtmp
     else:
         ens_estimate = perturb_estimates_general(
             reg_estimate, reg_error, random_field, minrndnum, maxrndnum
@@ -582,6 +586,10 @@ def generate_prob_estimates_serial(config, member_range=[]):
 
         for vn in range(len(target_vars_independent)):
             var_name = target_vars_independent[vn]
+            if len(transform_vars[var_name]) > 0:
+                var_name_trans = var_name + "_" + transform_vars[var_name]
+            else:
+                var_name_trans = var_name
             # print(f'Probabilistic estimation for {var_name} and ensemble member {ens}--{ensemble_number}')
 
             if output_randomfield == True:
@@ -629,11 +637,22 @@ def generate_prob_estimates_serial(config, member_range=[]):
                     tartime,
                     config,
                 )
-                ds_out[var_name] = xr.DataArray(ens_estimate, dims=("y", "x", "time"))
+
+                if len(transform_vars[var_name]) > 0:
+                    ds_out[var_name_trans] = ens_estimate
+                    ds_out[var_name] = data_transformation(
+                        ens_estimate,
+                        transform_vars[var_name],
+                        transform_settings[transform_vars[var_name]],
+                        "back_transform",
+                        times=tartime,
+                    )
+                else:
+                    ds_out[var_name] = ens_estimate
                 t2 = time.time()
                 print("time cost of probablistic estimation:", t2 - t1)
 
-                ds_out[var_name + "_rnd"] = xr.DataArray(
+                ds_out[var_name_trans + "_rnd"] = xr.DataArray(
                     random_field, dims=("y", "x", "time")
                 )
                 ########################################
@@ -701,13 +720,38 @@ def generate_prob_estimates_serial(config, member_range=[]):
                         maxrndnum,
                         transform_vars[var_name],
                         transform_settings[transform_vars[var_name]],
-                        None,
+                        tartime,
                         config,
                     )
                     ens_estimate[:, :, i] = ens_estimate_step
 
                 # Assign the combined estimates to the output dataset
-                ds_out[var_name] = xr.DataArray(ens_estimate, dims=("y", "x", "time"))
+
+                if len(transform_vars[var_name]) > 0:
+                    # Backtransformation
+                    ds_out[var_name_trans] = xr.DataArray(
+                        ens_estimate, dims=("y", "x", "time")
+                    )
+                    cdfs = calculate_ecdf_cdfs(
+                        xr.open_dataset(config["file_allstn"]),
+                        var_name,
+                        transform_settings[transform_vars[var_name]],
+                    )
+                    _ens_estimate_backtransform = data_transformation(
+                        ens_estimate,
+                        transform_vars[var_name],
+                        transform_settings[transform_vars[var_name]],
+                        "back_transform",
+                        times=tartime,
+                        cdfs=cdfs,
+                    )
+                    ds_out[var_name] = xr.DataArray(
+                        _ens_estimate_backtransform, dims=("y", "x", "time")
+                    )
+                else:
+                    ds_out[var_name] = xr.DataArray(
+                        ens_estimate, dims=("y", "x", "time")
+                    )
 
             ########################################
 

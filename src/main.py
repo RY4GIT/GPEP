@@ -60,15 +60,18 @@ if __name__ == "__main__":
     else:
         ########################################################################################################################
         # estimate gridcell uncertainty based on interpolating estimation error from station locations (the LOO regression)
+        # See "probabilistic_auxiliary.py" for more details
         config = probabilistic_auxiliary.extrapolate_auxiliary_info((config))
 
         ########################################################################################################################
         # probabilistic estimation (ensemble generation)
 
         # 1. get space and time correlations
+        # See "data_correlation.py" for more details
         config = data_correlation.station_space_time_correlation(config)
 
         # 2. probabilistic estimation
+        # See "probabilistic_estimation.py" for more details
         config = probabilistic_estimation.generate_prob_estimates(config)
 
     t2 = time.time()
