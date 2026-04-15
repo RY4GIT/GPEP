@@ -214,6 +214,8 @@ def extrapolate_auxiliary_info(config):
         else:
             var_name_trans = ""
 
+        stn_combo_dim = f"stn_combo_{var_name}"
+
         ########################################################################################################################
         # load data
 
@@ -289,7 +291,7 @@ def extrapolate_auxiliary_info(config):
                 # Map each timestep to its corresponding combo
                 for t in range(ntime):
                     nearIndex[t, :, :, :] = nearIndex_combo.sel(
-                        stn_combo_sm=stn_combo_idx[t]
+                        {stn_combo_dim: stn_combo_idx[t]}
                     ).values
 
             else:
@@ -314,7 +316,7 @@ def extrapolate_auxiliary_info(config):
                 # Map each timestep to its corresponding combo
                 for t in range(ntime):
                     nearWeight[t, :, :, :] = nearWeight_combo.sel(
-                        stn_combo_sm=stn_combo_idx[t]
+                        {stn_combo_dim: stn_combo_idx[t]}
                     ).values
 
             else:
