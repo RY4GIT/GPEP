@@ -89,13 +89,13 @@ print_config = false
 ###### STATION / DATA ######
 
 # **overwrite_merged_stnfile**: Merge multiple input data files
-overwrite_merged_stnfile = true
+overwrite_merged_stnfile = false
 
 # **overwrite_stninfo**: Files related integrated station inputs and nearby information
-overwrite_stninfo = true 
+overwrite_stninfo = false 
 
 # **overwrite_weight**: For station weight file  
-overwrite_weight = true
+overwrite_weight = false
 
 ###### REGRESSION ######
 # **overwrite_cv_reg**: For station-based regression cross validation file
@@ -110,7 +110,7 @@ overwrite_grid_reg = true
 overwrite_spcorr = false
 
 # **overwrite_station_cc**: For the station space-time correlation file  
-overwrite_station_cc = true
+overwrite_station_cc = false
 
 ###### ENSEMBLE ######
 

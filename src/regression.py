@@ -379,7 +379,17 @@ def regression_for_a_chunk(r1, r2, c1, c2, data=None):
                 _sample_nearIndex = tar_nearIndex[t, r, c, :]
                 _sample_weight = tar_nearWeight[t, r, c, :]
                 index_valid = _sample_weight >= 0
-                if np.sum(index_valid) > 0:
+                n_valid = np.sum(index_valid)
+
+                if n_valid < npredictor:
+                    # If not enough valid predictors (Number of data point is less than the number of predictors),
+                    # set the output to NaN
+                    # print(
+                    #     f"Warning: Not enough valid predictors at r={r}, c={c}, t={t}"
+                    # )
+                    ydata_tar[r - r1, c - c1, t] = np.nan
+                    continue
+                else:
                     # tar_nearIndex (ntime, nrow, ncol, stn)
                     # tar_nearWeight (ntime, nrow, ncol, stn)
                     # stn_predictor (stn, predictor)
@@ -444,6 +454,7 @@ def regression_for_a_chunk(r1, r2, c1, c2, data=None):
                     # MAIN REGRESSION PART
                     #########################################################
 
+                    # Implement regression
                     if method == "Linear":
                         ydata_tar[r - r1, c - c1, t], model = weight_linear_regression(
                             y=ydata_near,
@@ -501,7 +512,7 @@ def loop_regression(
     # Serial regression
     y_estimates = []
     model_stats = []
-    for chunk in tqdm(chunks):
+    for chunk in tqdm(chunks, leave=False):
         data = {}
         data["stn_data"] = stn_data
         data["stn_predictor"] = stn_predictor
