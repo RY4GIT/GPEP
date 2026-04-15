@@ -903,6 +903,7 @@ def main_regression(config, target):
     # loop variables
     for vn in range(len(target_vars)):
         var_name = target_vars[vn]
+        stn_combo_dim = f"stn_combo_{var_name}"
 
         # transformed or not
         if len(transform_vars[vn]) > 0:
@@ -987,14 +988,14 @@ def main_regression(config, target):
                 # Map each timestep to its corresponding combo
                 for t in range(ntime):
                     nearIndex[t, :, :, :] = nearIndex_combo.sel(
-                        stn_combo_sm=ds_stn_combo_idx[t]
+                        {stn_combo_dim: ds_stn_combo_idx[t]}
                     ).values
 
             else:
                 sys.exit(
                     f"Cannot find nearIndex_{near_keyword}_{var_name} in {file_stn_nearinfo}"
                 )
-
+        print(nearIndex.shape)
         ### predictor information ###
         if target == "grid":
             with xr.open_dataset(file_stn_nearinfo) as ds_nearinfo:
@@ -1038,9 +1039,14 @@ def main_regression(config, target):
                         )
 
                     # Map each timestep to its corresponding combo
+                    if stn_combo_dim not in nearWeight_combo.dims:
+                        sys.exit(
+                            f"Unknown stn_combo dimension for variable: {var_name}"
+                        )
+
                     for t in range(ntime):
                         nearWeight[t, :, :, :] = nearWeight_combo.sel(
-                            stn_combo_sm=ds_stn_combo_idx[t]
+                            {stn_combo_dim: ds_stn_combo_idx[t]}
                         ).values
 
             else:

@@ -587,7 +587,16 @@ def merge_stndata_into_single_file(config):
         # Read all station data files into a list of dataframes
         all_dfs = []
         for i, stnid in enumerate(df_stn.stnid):
-            infilei = f"{input_stn_path}/sm_{stnid}_depth{sensor_depth_cm}.csv"
+            if input_vars[0] == "sm":
+                infilei = f"{input_stn_path}/sm_{stnid}_depth{sensor_depth_cm}.csv"
+            elif input_vars[0] == "q_mean":
+                infilei = (
+                    f"{input_stn_path}/qmean_{sensor_depth_cm}_{stnid}_seasonal.csv"
+                )
+            else:
+                print(f"Unknown input variable: {input_vars[0]}")
+                sys.exit()
+
             if not os.path.isfile(infilei):
                 print(f"{infilei} does not exist. Skip {stnid}.")
                 continue
@@ -606,7 +615,10 @@ def merge_stndata_into_single_file(config):
         ########################################################################################################################
         # Resample the data to the desired frequency
         # TODO: make the frequency flexible
-        all_dfs_concat = _all_dfs_concat.resample("D").mean()
+        if input_vars[0] == "sm":
+            all_dfs_concat = _all_dfs_concat.resample("D").mean()
+        elif input_vars[0] == "q_mean":
+            all_dfs_concat = _all_dfs_concat
 
         # create empty xarray dataset with coordinates
         coor_stn_vars = ["lat", "lon", "mask"] + static_stn_vars

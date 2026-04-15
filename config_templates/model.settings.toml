@@ -99,10 +99,10 @@ overwrite_weight = false
 
 ###### REGRESSION ######
 # **overwrite_cv_reg**: For station-based regression cross validation file
-overwrite_stn_cv_reg = false
+overwrite_stn_cv_reg = true
 
 # **overwrite_grid_reg**: For gridded regression file  
-overwrite_grid_reg = false
+overwrite_grid_reg = true
 
 ###### SCRF ######
 # **overwrite_spcorr**: For spatial correlation structure files  
@@ -110,7 +110,7 @@ overwrite_grid_reg = false
 overwrite_spcorr = false
 
 # **overwrite_station_cc**: For the station space-time correlation file  
-overwrite_station_cc = false
+overwrite_station_cc = true
 
 ###### ENSEMBLE ######
 
