@@ -11,7 +11,7 @@ case_name = 'AZWGdynamicq'
 num_processes = 5
 
 # model setting file
-modelsettings_file = "model.settings.toml"
+modelsettings_file = "model.settings.q.toml"
 
 ########################################################################################################################
 # settings for gridded estimation using regression or machine learning methods

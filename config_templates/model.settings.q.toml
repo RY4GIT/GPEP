@@ -92,28 +92,28 @@ print_config = false
 overwrite_merged_stnfile = true
 
 # **overwrite_stninfo**: Files related integrated station inputs and nearby information
-overwrite_stninfo = false 
+overwrite_stninfo = true 
 
 # **overwrite_weight**: For station weight file  
-overwrite_weight = false
+overwrite_weight = true
 
 ###### REGRESSION ######
 # **overwrite_cv_reg**: For station-based regression cross validation file
-overwrite_stn_cv_reg = false
+overwrite_stn_cv_reg = true
 
 # **overwrite_grid_reg**: For gridded regression file  
-overwrite_grid_reg = false
+overwrite_grid_reg = true
 
 ###### SCRF ######
 # **overwrite_spcorr**: For spatial correlation structure files  
 # ****** This spatial correlation file takes time ******
-overwrite_spcorr = false
+overwrite_spcorr = true
 
 # **overwrite_station_cc**: For the station space-time correlation file  
-overwrite_station_cc = false
+overwrite_station_cc = true
 
 ###### ENSEMBLE ######
 
 # **overwrite_ens**: For ensemble output files  
-overwrite_ens = false
+overwrite_ens = true
 
