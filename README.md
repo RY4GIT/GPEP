@@ -1,12 +1,30 @@
-# GPEP-theta
+# GPEP-*θ*
 
-This code is modified from original GPEP code:
-[![DOI](https://zenodo.org/badge/674783032.svg)](https://zenodo.org/badge/latestdoi/674783032)  
+This code is modified from the original GPEP code: https://github.com/NCAR/GPEP
+
+[![DOI](https://zenodo.org/badge/674783032.svg)](https://zenodo.org/badge/latestdoi/674783032)
+
+Desgined to run GPEP analysis for: 
+- In-situ soil moisture data (*θ*), daily
+- Soil moisture drydown parameter (*q*), seasonally
 
 ## Changes made
-- Functions not used in this experiment is removed for readability (e.g., probablistic variables treatment, unused regression functions)
 - `data_processing.py` is adjusted to my specific input file type
 - `data_processing.py`, `near_stn_search.py`, `regression.py`, `weight_calculation.py`, and `probabilistic_auxiliary.py` are modified to allow time-varying data availability (nearDistance and nearWeight changes according to station data availability). 
+- Functions not used in this experiment is removed for readability (e.g., probablistic variables treatment, unused regression functions)
+
+### Notes on `model.settings.toml`
+
+**Need to run again?** A checkmark means rerun that step (`overwrite=true`); leave earlier steps as-is when only the regression setup changes.
+
+| Step | Variable name | Change data | Change regression design |
+| --- | :---: | :---: | :---: |
+| Merged station file |`overwrite_merged_stnfile`| ✓ | |
+| Nearinfo |`overwrite_stninfo`| ✓ | |
+| Weight|`overwrite_weight`| ✓ | |
+| Spatial correlation (spcorr) |`overwrite_spcorr`| ✓ | |
+| Regression (CV and Grid) |`overwrite_stn_cv_reg` `overwrite_grid_reg`| ✓ | ✓ |
+| Spatio-temporal correlation of errors |`overwrite_station_cc`| ✓ | ✓ |
 
 
 ## Related References
@@ -27,12 +45,9 @@ This code is modified from original GPEP code:
 - Tang, G., Clark, M. P., Papalexiou, S. M., Newman, A. J., Wood, A. W., Brunet, D., & Whitfield, P. H. (2021). EMDNA: an Ensemble Meteorological Dataset for North America. Earth System Science Data, 13(7), 3337–3362. https://doi.org/10.5194/essd-13-3337-2021
 
 ## Contacts
-- Guoqiang Tang (guoqiang@ucar.edu), primary developer
-- Andy Wood (andywood@ucar.edu), project(s) lead
-
-## Additional Acknowledgements
-We would like to acknowledge high-performance computing support from Cheyenne (doi:10.5065/D6RX99HX) and Derecho provided by NCAR's Computational and Information Systems Laboratory, sponsored by the National Science Foundation.
-
+- Ryoko Araki, adapted this version for soil moisture analysis
+- Guoqiang Tang (guoqiang@ucar.edu), GPEP primary developer
+- Andy Wood (andywood@ucar.edu), GPEP project(s) lead
 
 
 

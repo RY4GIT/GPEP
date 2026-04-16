@@ -3,7 +3,7 @@
 ## testcase.config.dynamic.toml
 This example uses ` ['latitude', 'longitude', 'elev', 'gradient_n_s', 'gradient_w_e']` as the predictors to perform locally weighted linear/logistic regression for the test case. To run the test case, following the codes as below:  
 ```
-python main.py ../config_templates/testcase.config.dynamic.toml
+python main.py ../config/testcase.config.dynamic.toml
 ```
 
 ## testcase.config.dynamic.toml
