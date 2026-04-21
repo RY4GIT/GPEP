@@ -381,7 +381,7 @@ def regression_for_a_chunk(r1, r2, c1, c2, data=None):
                 index_valid = _sample_weight >= 0
                 n_valid = np.sum(index_valid)
 
-                if n_valid < npredictor:
+                if n_valid <= npredictor:
                     # If not enough valid predictors (Number of data point is less than the number of predictors),
                     # set the output to NaN
                     # print(
