@@ -49,7 +49,6 @@ def find_nearstn_for_one_target(
     stnID = np.arange(len(lat_stn))
 
     # basic control to reduce the number of input stations
-    # Want to keep try_radius large if including all stations
     try_index = (np.abs(lat_stn - lat_tar) < try_radius) & (
         np.abs(lon_stn - lon_tar) < try_radius
     )
@@ -59,34 +58,21 @@ def find_nearstn_for_one_target(
 
     # calculate distance (km)
     dist_try = distance(lat_tar, lon_tar, lat_stn_try, lon_stn_try)
-
-    # Keep initial_radius large if including all stations
     index_use = dist_try <= initial_radius
-
     nstn = np.sum(index_use)
-
-    # If there is more than nearstn_max stations, use the closest nearstn_max stations
-    # Keep nearstn_max large if including all stations
     if nstn >= nearstn_max:  # strategy-1
-        print("##### Double check nearstn_max or initial_radius #####")
         dist_try = dist_try[index_use]  # delete redundant stations
         stnID_try = stnID_try[index_use]
         index_final = np.argsort(dist_try)[:nearstn_max]
         near_index[0:nearstn_max] = stnID_try[index_final]
         near_dist[0:nearstn_max] = dist_try[index_final]
-    # If there is less than nearstn_min stations, use the closest nearstn_min stations
-    # Keep nearstn_min small if including all stations
     else:  # strategy-2
         dist = distance(lat_tar, lon_tar, lat_stn, lon_stn)
         index_use = dist <= initial_radius
-
-        # If there is more than nearstn_min stations, use all of the stations within radius
         if np.sum(index_use) >= nearstn_min:
-            ########### THIS IS WHERE Q-FIELD ANALYSIS TARGETS ############
-            stnID = stnID[try_index]
-            dist = dist[try_index]
+            stnID = stnID[index_use]
+            dist = dist[index_use]
             nearstn_use = min(len(stnID), nearstn_max)
-
         else:
             nearstn_use = nearstn_min
 

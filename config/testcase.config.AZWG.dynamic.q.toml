@@ -32,7 +32,7 @@ outpath_parent = "G:/Shared drives/Ryoko and Hilary/q-field/out/gpep/AZWGq"
 ############################## target variables and periods
 # target period
 date_start = "2015-07-15"
-date_end = "2021-01-15" 
+date_end = "2019-01-15" 
 # q data available up to 2023-01-15; but dayMET only available up to 2020 EOY
 
 # soil moisture sensor depth
@@ -70,10 +70,12 @@ dynamic_predictor_operation = []
 
 ############################## static/dynamic predictors used in regression
 # static predictors in input_stn_list or input_stn_all
-predictor_name_static_stn = ['PercSiltClay', 'upstream_area_km2', 'slope_e', 'slope_n']
+predictor_name_static_stn = ['PercSand', 'upstream_area_km2', 'slope_e', 'slope_n']
+# predictor_name_static_stn = ['PercSand', 'twi', 'northness', 'eastness']
 
 # dynamic predictors in infile_grid_domain
-predictor_name_static_grid = ['PercSiltClay', 'upstream_area_km2', 'slope_e', 'slope_n']
+predictor_name_static_grid = ['PercSand', 'upstream_area_km2', 'slope_e', 'slope_n']
+# predictor_name_static_grid = ['PercSand', 'twi', 'northness', 'eastness']
 
 ########################################################################################################################
 # settings for probabilistic estimation
@@ -89,10 +91,10 @@ ensemble_end = 5
 # link variables for random number generation dependence
 linkvar = []
 
-# variable correlations. Leave blank to calculate them from raw data
-# clen = [] 
+# variable correlations. They are all optional
+clen = [36] 
 # corresponding to target_vars
-# lag1_auto_cc = [] 
+# lag1_auto_cc = [-9999] 
 # corresponding to target_vars
 # cross_cc = [] 
 # corresponding to linkvar

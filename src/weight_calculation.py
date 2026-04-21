@@ -17,7 +17,7 @@ def distanceweight_userdefined(dist, maxdist, weight_formula):
 
 
 def calculate_weights_from_distance(
-    nearDistance, weight_max_distance=100, exp=3, formula=""
+    nearDistance, weight_max_distance=100, initial_distance=100, exp=3, formula=""
 ):
     # calculate weights
 
@@ -63,6 +63,7 @@ def calculate_weight_using_nearstn_info(config):
     # in/out information to this function
     file_stn_nearinfo = config["file_stn_nearinfo"]
     file_stn_weight = config["file_stn_weight"]
+    initial_distance = config["initial_distance"]
     weight_max_distance = config["weight_max_distance"]
 
     if "weight_formula" in config:
@@ -127,6 +128,7 @@ def calculate_weight_using_nearstn_info(config):
                                 calculate_weights_from_distance(
                                     nearDistance[combo, i, j, :],
                                     weight_max_distance,
+                                    initial_distance,
                                     3,
                                     weight_formula,
                                 )
@@ -143,6 +145,7 @@ def calculate_weight_using_nearstn_info(config):
                         nearWeight[combo, s, :] = calculate_weights_from_distance(
                             nearDistance[combo, s, :],
                             weight_max_distance,
+                            initial_distance,
                             3,
                             weight_formula,
                         )

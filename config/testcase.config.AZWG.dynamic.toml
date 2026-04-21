@@ -51,8 +51,8 @@ mapping_InOut_var = []
 # min/max limit or transformation
 minRange_vars = [0.0]
 maxRange_vars = [1.0]
-transform_vars = ['ecdf']
-
+# transform_vars = ['ecdf']
+# transform_vars = []
 
 ############################## dynamic predictors for regression
 # only useful when dynamic_predictor_filelist is valid
@@ -69,10 +69,10 @@ dynamic_predictor_operation = []
 
 ############################## static/dynamic predictors used in regression
 # static predictors in input_stn_list or input_stn_all
-predictor_name_static_stn = ['PercSiltClay', 'upstream_area_km2', 'slope_e', 'slope_n']
+predictor_name_static_stn = ['PercSand', 'ln_upstream_area_km2', 'slope_e', 'slope_n']
 
 # dynamic predictors in infile_grid_domain
-predictor_name_static_grid = ['PercSiltClay', 'upstream_area_km2', 'slope_e', 'slope_n']
+predictor_name_static_grid = ['PercSand', 'ln_upstream_area_km2', 'slope_e', 'slope_n']
 
 ########################################################################################################################
 # settings for probabilistic estimation
@@ -89,12 +89,12 @@ ensemble_end = 5
 linkvar = []
 
 # variable correlations. They are all optional
-# TODO: check later
-clen = [150] 
+# variable correlations. Leave blank to calculate them from raw data
+# clen = [] 
 # corresponding to target_vars
-lag1_auto_cc = [-9999] 
+# lag1_auto_cc = [] 
 # corresponding to target_vars
-cross_cc = [] 
+# cross_cc = [] 
 # corresponding to linkvar
 
 # direct: using raw time series to calculate autocorrelation; anomaly: using the anomaly of time series to calculate autocorrelation

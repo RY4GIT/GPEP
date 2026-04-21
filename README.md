@@ -17,14 +17,14 @@ Desgined to run GPEP analysis for:
 
 **Need to run again?** A checkmark means rerun that step (`overwrite=true`); leave earlier steps as-is when only the regression setup changes.
 
-| Step | Variable name | Change data | Change regression design |
-| --- | :---: | :---: | :---: |
-| Merged station file |`overwrite_merged_stnfile`| ✓ | |
-| Nearinfo |`overwrite_stninfo`| ✓ | |
-| Weight|`overwrite_weight`| ✓ | |
-| Spatial correlation (spcorr) |`overwrite_spcorr`| ✓ | |
-| Regression (CV and Grid) |`overwrite_stn_cv_reg` `overwrite_grid_reg`| ✓ | ✓ |
-| Spatio-temporal correlation of errors |`overwrite_station_cc`| ✓ | ✓ |
+| Step | Variable name | Change data | Change regression design | Change weight |
+| --- | :---: | :---: | :---: | :---: |
+| Merged station file |`overwrite_merged_stnfile`| ✓ | ✓ |  |
+| Nearinfo |`overwrite_stninfo`| ✓ |  | ✓ |
+| Weight|`overwrite_weight`| ✓ | | ✓ |
+| Spatial correlation (spcorr) |`overwrite_spcorr`| ✓ | | |
+| Regression (CV and Grid) |`overwrite_stn_cv_reg` `overwrite_grid_reg`| ✓ | ✓ | ✓ |
+| Spatio-temporal correlation of errors |`overwrite_station_cc`| ✓ | ✓ | ✓ |
 
 
 ## Related References
