@@ -91,7 +91,8 @@ print_config = false
 overwrite_merged_stnfile = false
 
 # **overwrite_stninfo**: Files related integrated station inputs and nearby information
-overwrite_stninfo = false 
+# This also includes nearDistance calculation, so if you want to change weight, run this too
+overwrite_stninfo = true 
 
 # **overwrite_weight**: For station weight file  
 overwrite_weight = true
