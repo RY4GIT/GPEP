@@ -29,6 +29,9 @@ initial_distance = 10000
 # first try this radius (km). if not enough, expand. Could be useful to reduce computation time for large domain search.
 try_radius = 10000
 
+# Weight calculation distance threshold in km
+weight_max_distance = 36
+
 ########################################################################################################################
 # default settings
 ########################################################################################################################
@@ -91,14 +94,14 @@ overwrite_merged_stnfile = false
 overwrite_stninfo = false 
 
 # **overwrite_weight**: For station weight file  
-overwrite_weight = false
+overwrite_weight = true
 
 ###### REGRESSION ######
 # **overwrite_cv_reg**: For station-based regression cross validation file
-overwrite_stn_cv_reg = false
+overwrite_stn_cv_reg = true
 
 # **overwrite_grid_reg**: For gridded regression file  
-overwrite_grid_reg = false
+overwrite_grid_reg = true
 
 ###### SCRF ######
 # **overwrite_spcorr**: For spatial correlation structure files  
@@ -106,7 +109,7 @@ overwrite_grid_reg = false
 overwrite_spcorr = false
 
 # **overwrite_station_cc**: For the station space-time correlation file  
-overwrite_station_cc = false
+overwrite_station_cc = true
 
 ###### ENSEMBLE ######
 
