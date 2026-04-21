@@ -92,10 +92,10 @@ overwrite_merged_stnfile = false
 
 # **overwrite_stninfo**: Files related integrated station inputs and nearby information
 # This also includes nearDistance calculation, so if you want to change weight, run this too
-overwrite_stninfo = true 
+overwrite_stninfo = false 
 
 # **overwrite_weight**: For station weight file  
-overwrite_weight = true
+overwrite_weight = false
 
 ###### REGRESSION ######
 # **overwrite_cv_reg**: For station-based regression cross validation file

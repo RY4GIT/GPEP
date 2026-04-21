@@ -17,21 +17,20 @@ n_splits = 10 # only useful for sklearn machine learning methods, but don't comm
 ########################################################################################################################
 
 # Number of stations to consider for each target point. nearstn_min<=nearstn_max.
-nearstn_min = 18  # nearby stations: minimum number
-nearstn_max = 100  # nearby stations: maximum number
-
-# 27 for AZWG
-# 35 for GALR
-# 18 for OKFC
+nearstn_min = 1  # nearby stations: minimum number: force to take in any stations
+nearstn_max = 50  # nearby stations: maximum number
 
 # Weight calculation formula. See ./docs/How_to_create_config_files.md for instruction.
 weight_formula = "(1 - (dist / maxdist) ** 3) ** 3"
 
 # Initial Search Distance in km  - 1m be effectively uses the max distance between stations as weight
-initial_distance = 0.000001
+initial_distance = 10000
 
 # first try this radius (km). if not enough, expand. Could be useful to reduce computation time for large domain search.
 try_radius = 10000
+
+# Weight calculation distance threshold in km
+weight_max_distance = 36
 
 ########################################################################################################################
 # default settings

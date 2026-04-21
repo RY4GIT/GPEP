@@ -68,6 +68,7 @@ def find_nearstn_for_one_target(
     # If there is more than nearstn_max stations, use the closest nearstn_max stations
     # Keep nearstn_max large if including all stations
     if nstn >= nearstn_max:  # strategy-1
+        print("##### Double check nearstn_max or initial_radius #####")
         dist_try = dist_try[index_use]  # delete redundant stations
         stnID_try = stnID_try[index_use]
         index_final = np.argsort(dist_try)[:nearstn_max]
@@ -81,6 +82,7 @@ def find_nearstn_for_one_target(
 
         # If there is more than nearstn_min stations, use all of the stations within radius
         if np.sum(index_use) >= nearstn_min:
+            ########### THIS IS WHERE Q-FIELD ANALYSIS TARGETS ############
             stnID = stnID[try_index]
             dist = dist[try_index]
             nearstn_use = min(len(stnID), nearstn_max)
