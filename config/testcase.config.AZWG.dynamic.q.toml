@@ -70,11 +70,11 @@ dynamic_predictor_operation = []
 
 ############################## static/dynamic predictors used in regression
 # static predictors in input_stn_list or input_stn_all
-predictor_name_static_stn = ['PercSand', 'upstream_area_km2', 'slope_e', 'slope_n']
+predictor_name_static_stn = ['PercSand', 'ln_upstream_area_km2', 'slope_e', 'slope_n']
 # predictor_name_static_stn = ['PercSand', 'twi', 'northness', 'eastness']
 
 # dynamic predictors in infile_grid_domain
-predictor_name_static_grid = ['PercSand', 'upstream_area_km2', 'slope_e', 'slope_n']
+predictor_name_static_grid = ['PercSand', 'ln_upstream_area_km2', 'slope_e', 'slope_n']
 # predictor_name_static_grid = ['PercSand', 'twi', 'northness', 'eastness']
 
 ########################################################################################################################
