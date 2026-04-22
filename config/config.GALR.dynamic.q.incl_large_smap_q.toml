@@ -5,7 +5,7 @@
 ########################################################################################################################
 
 # case name
-case_name = 'GALRdynamicq'
+case_name = 'GALRdynamicq_incl_large_smap_q'
 
 
 # worker number (cpu cores)
@@ -22,13 +22,13 @@ modelsettings_file = "model.settings.q.toml"
 
 # the input station file list (with attributes) and input station path
 input_stn_list = "G:/Shared drives/Ryoko and Hilary/q-field/data/stac_data/GALR/gpep_site_metadata.csv"
-input_stn_path = "G:/Shared drives/Ryoko and Hilary/q-field/out/insitu_est_q_indiv/GALR/05cm_flipl_2026-04-22/gpep_input" # Make sure to select the cases of interest
+input_stn_path = "G:/Shared drives/Ryoko and Hilary/q-field/out/insitu_est_q_indiv/GALR/02in_flipl_2026-04-22/gpep_input" # Make sure to select the cases of interest
 
 # domain gridded static attributes (e.g., dem, lon, lat, slope)
 infile_grid_domain = "G:/Shared drives/Ryoko and Hilary/q-field/data/stac_data/GALR/gpep_input_static.nc"
 
 # parent output path
-outpath_parent = "G:/Shared drives/Ryoko and Hilary/q-field/out/gpep/GALRq"
+outpath_parent = "G:/Shared drives/Ryoko and Hilary/q-field/out/gpep/GALRq_incl_large_smap_q"
 
 ############################## target variables and periods
 # target period
@@ -37,7 +37,7 @@ date_end = "2021-01-15"
 # q data available up to 2023-01-15; but dayMET only available up to 2020 EOY
 
 # soil moisture sensor depth
-sensor_depth_cm = "05cm"
+sensor_depth_cm = "02in"
 
 # input/output variables
 input_vars = ['q_mean'] # variables in the raw station files

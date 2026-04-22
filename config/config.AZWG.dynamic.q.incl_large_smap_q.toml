@@ -27,7 +27,7 @@ input_stn_path = "G:/Shared drives/Ryoko and Hilary/q-field/out/insitu_est_q_ind
 infile_grid_domain = "G:/Shared drives/Ryoko and Hilary/q-field/data/stac_data/AZWG/gpep_input_static.nc"
 
 # parent output path
-outpath_parent = "G:/Shared drives/Ryoko and Hilary/q-field/out/gpep/AZWGq"
+outpath_parent = "G:/Shared drives/Ryoko and Hilary/q-field/out/gpep/AZWGq_incl_large_smap_q"
 
 ############################## target variables and periods
 # target period

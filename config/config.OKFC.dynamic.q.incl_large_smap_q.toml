@@ -5,7 +5,7 @@
 ########################################################################################################################
 
 # case name
-case_name = 'OKFCdynamicq'
+case_name = 'OKFCdynamicq_incl_large_smap_q'
 
 # worker number (cpu cores)
 num_processes = 5
@@ -27,7 +27,7 @@ input_stn_path = "G:/Shared drives/Ryoko and Hilary/q-field/out/insitu_est_q_ind
 infile_grid_domain = "G:/Shared drives/Ryoko and Hilary/q-field/data/stac_data/OKFC/gpep_input_static.nc"
 
 # parent output path
-outpath_parent = "G:/Shared drives/Ryoko and Hilary/q-field/out/gpep/OKFCq"
+outpath_parent = "G:/Shared drives/Ryoko and Hilary/q-field/out/gpep/OKFCq_incl_large_smap_q"
 
 ############################## target variables and periods
 # target period
