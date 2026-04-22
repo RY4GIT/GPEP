@@ -56,7 +56,7 @@ def find_nearstn_for_one_target(
     lon_stn_try = lon_stn[try_index]
     stnID_try = stnID[try_index]
 
-    # calculate distance (km)
+    # calculate near distance (km)
     dist_try = distance(lat_tar, lon_tar, lat_stn_try, lon_stn_try)
     index_use = dist_try <= initial_radius
     nstn = np.sum(index_use)

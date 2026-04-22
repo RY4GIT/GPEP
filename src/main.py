@@ -16,7 +16,7 @@ if __name__ == "__main__":
     t1 = time.time()
 
     # config_file = sys.argv[1]
-    config_file = r"C:\Users\flipl\dev\GPEP\config\testcase.config.AZWG.dynamic.q.toml"
+    config_file = r"C:\Users\flipl\dev\GPEP\config\testcase.config.GALR.dynamic.toml"
 
     ########################################################################################################################
     # load configuration file

@@ -31,8 +31,8 @@ outpath_parent = "G:/Shared drives/Ryoko and Hilary/q-field/out/gpep/TxSON"
 
 ############################## target variables and periods
 # target period
-date_start = "2017-08-10"
-date_end = "2017-09-02"
+date_start = "2015-01-15"
+date_end = "2020-01-15" 
 
 # soil moisture sensor depth
 sensor_depth_cm = "05cm"
@@ -60,7 +60,7 @@ maxRange_vars = [1.0]
 dynamic_predictor_filelist = "G:/Shared drives/Ryoko and Hilary/q-field/data/stac_data/TxSON/gpep_dynamic_data_list.txt"
 
 # dynamic predictors for each target_vars. Empty list means no dynamic predictors
-dynamic_predictor_name = [['Lai_500m_filled', 'srad', 'vp']]
+dynamic_predictor_name = [['Lai_500m_filled', 'tmax', 'prcp']]
 
 # dynamic predictors may needs some processing. two keywords: "interp" an "transform"
 # Example "cube_root_prec_rate:interp=linear:transform=boxcox"
@@ -68,10 +68,10 @@ dynamic_predictor_operation = []
 
 ############################## static/dynamic predictors used in regression
 # static predictors in input_stn_list or input_stn_all
-predictor_name_static_stn = ['PercSand', 'PercSilt', 'PercClay', 'elev_m','northness', 'eastness', 'slope_m']
+predictor_name_static_stn = ['PercSand', 'ln_upstream_area_km2', 'slope_e', 'slope_n']
 
 # dynamic predictors in infile_grid_domain
-predictor_name_static_grid = ['PercSand', 'PercSilt', 'PercClay', 'elev_m','northness', 'eastness', 'slope_m']
+predictor_name_static_grid = ['PercSand', 'ln_upstream_area_km2', 'slope_e', 'slope_n']
 
 ########################################################################################################################
 # settings for probabilistic estimation
@@ -89,11 +89,11 @@ linkvar = []
 
 # variable correlations. They are all optional
 # TODO: check later
-clen = [150] 
+# clen = [150] 
 # corresponding to target_vars
-lag1_auto_cc = [-9999] 
+# lag1_auto_cc = [-9999] 
 # corresponding to target_vars
-cross_cc = [] 
+# cross_cc = [] 
 # corresponding to linkvar
 
 # direct: using raw time series to calculate autocorrelation; anomaly: using the anomaly of time series to calculate autocorrelation

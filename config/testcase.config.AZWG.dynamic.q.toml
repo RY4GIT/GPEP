@@ -32,7 +32,7 @@ outpath_parent = "G:/Shared drives/Ryoko and Hilary/q-field/out/gpep/AZWGq"
 ############################## target variables and periods
 # target period
 date_start = "2015-07-15"
-date_end = "2019-01-15" 
+date_end = "2020-01-15" 
 # q data available up to 2023-01-15; but dayMET only available up to 2020 EOY
 
 # soil moisture sensor depth
@@ -86,13 +86,14 @@ ensemble_flag = true
 
 # ensemble settings
 ensemble_start = 1
-ensemble_end = 5
+ensemble_end = 100
 
 # link variables for random number generation dependence
 linkvar = []
 
 # variable correlations. They are all optional
-clen = [36] 
+# Correlation length in km calculated from sm analysis
+clen = [387.4] 
 # corresponding to target_vars
 # lag1_auto_cc = [-9999] 
 # corresponding to target_vars
