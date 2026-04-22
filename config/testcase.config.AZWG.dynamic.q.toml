@@ -32,7 +32,7 @@ outpath_parent = "G:/Shared drives/Ryoko and Hilary/q-field/out/gpep/AZWGq"
 ############################## target variables and periods
 # target period
 date_start = "2015-07-15"
-date_end = "2020-01-15" 
+date_end = "2021-01-15" 
 # q data available up to 2023-01-15; but dayMET only available up to 2020 EOY
 
 # soil moisture sensor depth
@@ -41,7 +41,7 @@ sensor_depth_cm = "05cm"
 # input/output variables
 input_vars = ['q_mean'] # variables in the raw station files
 target_vars = ['q_mean'] # target output variables
-
+include_large_q = "False"
 # target variables that need occurrence probability estimation
 target_vars_WithProbability = []
 probability_thresholds = []

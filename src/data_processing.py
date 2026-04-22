@@ -497,6 +497,8 @@ def merge_stndata_into_single_file(config):
     target_vars = config["target_vars"]
     predictor_name_static_stn = config["predictor_name_static_stn"]
     static_stn_vars = [var for var in predictor_name_static_stn]
+    if target_vars[0] == "q_mean":
+        include_large_q = bool(config["include_large_q"])
 
     if "minRange_vars" in config:
         minRange_vars = config["minRange_vars"]
@@ -590,7 +592,12 @@ def merge_stndata_into_single_file(config):
             if input_vars[0] == "sm":
                 infilei = f"{input_stn_path}/sm_{stnid}_depth{sensor_depth_cm}.csv"
             elif input_vars[0] == "q_mean":
-                infilei = f"{input_stn_path}/qmean_{sensor_depth_cm}_{stnid}_seasonal_no_large_q.csv"
+                if include_large_q:
+                    infilei = (
+                        f"{input_stn_path}/qmean_{sensor_depth_cm}_{stnid}_seasonal.csv"
+                    )
+                else:
+                    infilei = f"{input_stn_path}/qmean_{sensor_depth_cm}_{stnid}_seasonal_no_large_q.csv"
             else:
                 print(f"Unknown input variable: {input_vars[0]}")
                 sys.exit()

@@ -5,7 +5,8 @@
 ########################################################################################################################
 
 # case name
-case_name = 'AZWGdynamicq'
+case_name = 'GALRdynamicq'
+
 
 # worker number (cpu cores)
 num_processes = 5
@@ -20,19 +21,19 @@ modelsettings_file = "model.settings.q.toml"
 ############################## input/output files
 
 # the input station file list (with attributes) and input station path
-input_stn_list = "G:/Shared drives/Ryoko and Hilary/q-field/data/stac_data/AZWG/gpep_site_metadata.csv"
-input_stn_path = "G:/Shared drives/Ryoko and Hilary/q-field/out/insitu_est_q_indiv/AZWG/05cm_flipl_2026-04-20/gpep_input" # Make sure to select the cases of interest
+input_stn_list = "G:/Shared drives/Ryoko and Hilary/q-field/data/stac_data/GALR/gpep_site_metadata.csv"
+input_stn_path = "G:/Shared drives/Ryoko and Hilary/q-field/out/insitu_est_q_indiv/GALR/05cm_flipl_2026-04-20/gpep_input" # Make sure to select the cases of interest
 
 # domain gridded static attributes (e.g., dem, lon, lat, slope)
-infile_grid_domain = "G:/Shared drives/Ryoko and Hilary/q-field/data/stac_data/AZWG/gpep_input_static.nc"
+infile_grid_domain = "G:/Shared drives/Ryoko and Hilary/q-field/data/stac_data/GALR/gpep_input_static.nc"
 
 # parent output path
-outpath_parent = "G:/Shared drives/Ryoko and Hilary/q-field/out/gpep/AZWGq"
+outpath_parent = "G:/Shared drives/Ryoko and Hilary/q-field/out/gpep/GALRq"
 
 ############################## target variables and periods
 # target period
 date_start = "2015-07-15"
-date_end = "2020-01-15" 
+date_end = "2021-01-15" 
 # q data available up to 2023-01-15; but dayMET only available up to 2020 EOY
 
 # soil moisture sensor depth
@@ -59,7 +60,7 @@ maxRange_vars = [100.0]
 # only useful when dynamic_predictor_filelist is valid
 
 # file list containing dynamic predictor inputs (optional). Give it a nonsense string (e.g., "NA") can turn off dynamic predictors
-dynamic_predictor_filelist = "G:/Shared drives/Ryoko and Hilary/q-field/data/stac_data/AZWG/gpep_dynamic_data_list_q.txt"
+dynamic_predictor_filelist = "G:/Shared drives/Ryoko and Hilary/q-field/data/stac_data/GALR/gpep_dynamic_data_list_q.txt"
 
 # dynamic predictors for each target_vars. Empty list means no dynamic predictors
 dynamic_predictor_name = [['Lai_500m_filled', 'tmax', 'prcp']]

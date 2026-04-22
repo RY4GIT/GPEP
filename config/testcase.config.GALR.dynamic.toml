@@ -32,7 +32,7 @@ outpath_parent = "G:/Shared drives/Ryoko and Hilary/q-field/out/gpep/GALR"
 ############################## target variables and periods
 # target period
 date_start = "2015-01-15"
-date_end = "2020-01-15" 
+date_end = "2021-01-15" 
 
 # soil moisture sensor depth
 sensor_depth_cm = "02in"
