@@ -20,7 +20,7 @@ def cal_cross_cc(d1, d2):
 
 def station_lag_correlation(data, lag):
     # data: [number of stations, number of time steps]
-    (ntime, nstn) = data.shape
+    (nstn, ntime) = data.shape
     cc = np.nan * np.zeros(nstn)
     for i in range(nstn):
         d1 = data[i, :-lag]
@@ -245,7 +245,15 @@ def station_space_time_correlation(config):
 
             # calculate var - moving_averaging(var) to remove monthly cycle
             if auto_corr_method_vn == "direct":
-                stn_value = ds_stn[var_name].values
+                _stn_value = ds_stn[var_name].values
+
+                # Assumes ds_stn[var_name] is (nstn, ntime)
+                if _stn_value.shape[0] == len(ds_stn.time):
+                    stn_value = _stn_value.T
+                else:
+                    stn_value = _stn_value
+                del _stn_value
+
                 cc = station_lag_correlation(stn_value, lag)
 
             elif auto_corr_method_vn == "anomaly":
